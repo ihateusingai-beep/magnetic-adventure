@@ -261,30 +261,36 @@ function drawBackground(){
 function drawCompass(x,y,angle,needleLen){
  ctx.save();
  ctx.translate(x,y);
- ctx.fillStyle='rgba(0,0,0,0.3)';
- ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=2;
- ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke();
+ ctx.fillStyle='rgba(0,0,0,0.25)';
+ ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1.5;
+ ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.stroke();
+ ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;
+ ctx.beginPath();ctx.moveTo(-18,0);ctx.lineTo(18,0);ctx.moveTo(0,-18);ctx.lineTo(0,18);ctx.stroke();
  ctx.rotate(angle);
- ctx.fillStyle='var(--n)';ctx.strokeStyle='var(--n)';
- ctx.beginPath();ctx.moveTo(needleLen/2,0);ctx.lineTo(0,3);ctx.lineTo(-needleLen/2,0);ctx.lineTo(0,-3);ctx.closePath();ctx.fill();
- ctx.fillStyle='var(--s)';ctx.strokeStyle='var(--s)';
- ctx.beginPath();ctx.moveTo(-needleLen/2,0);ctx.lineTo(0,3);ctx.lineTo(needleLen/2,0);ctx.lineTo(0,-3);ctx.closePath();ctx.fill();
+ const ng=ctx.createLinearGradient(0,-3,0,3);
+ ng.addColorStop(0,'#fff');ng.addColorStop(0.3,'#eee');ng.addColorStop(0.6,'#ccc');ng.addColorStop(1,'#aaa');
+ ctx.fillStyle='#e63946';ctx.strokeStyle='#a01020';ctx.lineWidth=1;
+ ctx.beginPath();ctx.moveTo(needleLen/2+2,0);ctx.lineTo(0,3.5);ctx.lineTo(0,-3.5);ctx.closePath();ctx.fill();ctx.stroke();
+ ctx.fillStyle=ng;ctx.strokeStyle='#888';ctx.lineWidth=1;
+ ctx.beginPath();ctx.moveTo(-needleLen/2-2,0);ctx.lineTo(0,3.5);ctx.lineTo(0,-3.5);ctx.closePath();ctx.fill();ctx.stroke();
  ctx.restore();
 }
 
 function drawMagnet(x,y,dir){
  ctx.save();
  ctx.translate(x,y);
- const w=80,h=30,r=8;
- ctx.fillStyle='#aaa';
- ctx.beginPath();
- roundRect(-w/2,-h/2,w,h,r);ctx.fill();
+ const w=90,h=34,r=10;
+ const g=ctx.createLinearGradient(-w/2,-h/2,-w/2,h/2);
+ g.addColorStop(0,'#777');g.addColorStop(0.3,'#ccc');g.addColorStop(0.5,'#eee');g.addColorStop(0.7,'#aaa');g.addColorStop(1,'#666');
+ ctx.fillStyle=g;
+ ctx.beginPath();roundRect(-w/2,-h/2,w,h,r);ctx.fill();
+ ctx.strokeStyle='#444';ctx.lineWidth=2;ctx.stroke();
  ctx.fillStyle=dir?'#e63946':'#457b9d';
  ctx.beginPath();roundRect(-w/2,-h/2,w/2,h,r,['tl','bl']);ctx.fill();
- ctx.fillStyle=dir?'#b0202f':'#2d5a7b';
+ ctx.fillStyle=dir?'#c01220':'#2a5070';
  ctx.beginPath();roundRect(0,-h/2,w/2,h,r,['tr','br']);ctx.fill();
- ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.fillText(dir?'N':'S',dir?-w/4:w/4,0);
  ctx.restore();
 }
@@ -312,14 +318,25 @@ function drawIron(obj){
  ctx.translate(obj.x,obj.y);
  ctx.rotate(obj.r||0);
  if(obj.type==='nail'){
-  ctx.fillStyle='#a8dadc';ctx.strokeStyle='#7bb8ba';ctx.lineWidth=2;
-  ctx.beginPath();ctx.roundRect(-18,-4,36,8,3);ctx.fill();ctx.stroke();
+  ctx.save();
+  ctx.shadowColor='#06d6a0';ctx.shadowBlur=8;
+  const g=ctx.createLinearGradient(-24,-5,24,5);
+  g.addColorStop(0,'#7ec8ca');g.addColorStop(0.5,'#a8dadc');g.addColorStop(1,'#7ec8ca');
+  ctx.fillStyle=g;ctx.strokeStyle='#5a9fa2';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(-24,-5,48,10,4);ctx.fill();ctx.stroke();
   ctx.fillStyle='#888';
-  ctx.beginPath();ctx.arc(-18,0,4,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-18,0,2,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(-24,0,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-24,0,2.5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
  }else{
+  ctx.save();
+  ctx.shadowColor='#06d6a0';ctx.shadowBlur=8;
   ctx.strokeStyle='#a8dadc';ctx.lineWidth=3;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(-10,-8);ctx.lineTo(-10,8);ctx.lineTo(10,8);ctx.lineTo(10,-8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-12,-10);ctx.lineTo(-12,10);ctx.lineTo(12,10);ctx.lineTo(12,-10);
+  ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-8,-10);ctx.lineTo(-8,6);ctx.lineTo(8,6);ctx.lineTo(8,-10);
+  ctx.stroke();
+  ctx.restore();
  }
  ctx.restore();
 }
@@ -354,7 +371,7 @@ function updateIron(){
   let fx=0,fy=0;
   for(const m of magnets){
    const d=dist(obj.x,obj.y,m.x,m.y);
-   if(d<40&&obj.type==='nail'){obj.gone=true;obj.vx=0;obj.vy=0;continue}
+   if(d<40&&(obj.type==='nail'||obj.type==='clip')){obj.gone=true;obj.vx=0;obj.vy=0;continue}
    if(d<80){
     const angle=Math.atan2(obj.y-m.y,obj.x-m.x);
     const force=(80-d)/80*3;
@@ -383,9 +400,9 @@ function updateIron(){
 
 function checkLevelComplete(){
  if(currentLevel===0){
-  const nails=ironObjects.filter(o=>o.type==='nail'&&!o.gone);
-  if(nails.length===0){
-   showComplete('太棒了！磁鐵吸起晒所有鐵釘！');
+  const remaining=ironObjects.filter(o=>(o.type==='nail'||o.type==='clip')&&!o.gone);
+  if(remaining.length===0){
+   showComplete('太棒了！磁鐵吸起晒所有金屬物件！');
   }
  }else if(currentLevel===1){
   let count=0;
@@ -454,8 +471,10 @@ function initLevel(lv){
   magnets.push({x:W*0.7,y:H*0.5,dir:true});
   const pos=[{x:W*0.2,y:H*0.3},{x:W*0.3,y:H*0.7},{x:W*0.5,y:H*0.5},{x:W*0.7,y:H*0.3},{x:W*0.5,y:H*0.7}];
   for(const p of pos)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
-  const nailPos=[{x:W*0.2,y:H*0.4},{x:W*0.4,y:H*0.6},{x:W*0.6,y:H*0.4}];
+  const nailPos=[{x:W*0.15,y:H*0.35},{x:W*0.3,y:H*0.6},{x:W*0.55,y:H*0.3},{x:W*0.75,y:H*0.65}];
   for(const p of nailPos)ironObjects.push({x:p.x,y:p.y,vx:0,vy:0,type:'nail',r:0});
+  const clipPos=[{x:W*0.25,y:H*0.5},{x:W*0.6,y:H*0.55},{x:W*0.45,y:H*0.7}];
+  for(const p of clipPos)ironObjects.push({x:p.x,y:p.y,vx:0,vy:0,type:'clip',r:0});
  }else if(lv===1){
  }else if(lv===2){
   magnets.push({x:W*0.3,y:H*0.5,dir:true});
