@@ -78,7 +78,7 @@ canvas{display:block;width:100%;height:100%}
  <div id="complete-banner">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
    <h2>🎉 完成！</h2>
-   <button onclick="closeBanner()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
+   <button id="bannerCloseBtn" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
   </div>
   <p id="bannerText">太棒了！</p>
   <button class="btn" onclick="nextLevelBanner()">下一關 ▶</button>
@@ -595,13 +595,14 @@ document.getElementById('btnNext').addEventListener('click',()=>{
 document.getElementById('fontSlider').addEventListener('input',function(){
  document.documentElement.style.setProperty('--fs',this.value+'px');
 });
-
+document.getElementById('bannerCloseBtn').addEventListener('click',function(){
+ document.getElementById('complete-banner').style.display='none';
+});
 buildSidebar();
 initLevel(0);
 document.getElementById('btnField').classList.add('active');
 document.getElementById('btnSound').classList.add('active');
 draw();
-})();
 </script>
 </body>
 </html>
