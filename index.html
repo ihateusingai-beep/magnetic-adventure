@@ -98,6 +98,7 @@ function resize(){
  canvas.width=W*dpr;canvas.height=H*dpr;
  canvas.style.width=W+'px';canvas.style.height=H+'px';
  ctx.scale(dpr,dpr);
+ console.log('RESIZE:',JSON.stringify({W,H,dpr,canvasW:canvas.width,canvasH:canvas.height}));
 }
 window.addEventListener('resize',resize);
 resize();
@@ -434,6 +435,7 @@ function playSpeech(text){
 
 function initLevel(lv){
  fieldLineDirty=true;
+ console.log('initLevel(',lv,') W=',W,'H=',H);
  const info=document.getElementById('level-info');
  info.innerHTML=`<h2>關卡 ${levels[lv].id}</h2><p>${levels[lv].desc}</p><p style="margin-top:6px;color:var(--accent)">任務：${levels[lv].task}</p>`;
  document.querySelector('#hint-bar span').textContent=levels[lv].hint;
@@ -471,7 +473,10 @@ function initLevel(lv){
  setTimeout(()=>playSpeech(levels[lv].task),800);
 }
 
+let drawFrames=0;
 function draw(){
+ if(drawFrames<3)console.log('draw frame',drawFrames,'W=',W,'H=',H);
+ drawFrames++;
  ctx.clearRect(0,0,W,H);
  drawBackground();
  if(showFieldLines){
