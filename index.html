@@ -464,6 +464,7 @@ function playSpeech(text){
 function initLevel(lv){
  fieldLineDirty=true;
  if(levelCompleteTimer)clearTimeout(levelCompleteTimer);
+ const info=document.getElementById('level-info');
  info.textContent='';
  const h2=document.createElement('h2');h2.textContent='關卡 '+levels[lv].id;
  const p1=document.createElement('p');p1.textContent=levels[lv].desc;
