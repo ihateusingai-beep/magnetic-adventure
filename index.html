@@ -34,7 +34,7 @@ input[type=range]{width:80px;accent-color:var(--accent)}
 .level-num{display:block;font-size:calc(18px + var(--fs,0px));font-weight:700;color:var(--accent)}
 .level-name{display:block;font-size:calc(10px + var(--fs,0px));margin-top:4px;line-height:1.2}
 #canvas-wrap{flex:1;position:relative;overflow:hidden}
-canvas{display:block;width:100%;height:100%}
+canvas{display:block;width:100%;height:100%;touch-action:none}
 #toolbar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:8px;background:var(--panel);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(255,255,255,0.1)}
 #hint-bar{flex-shrink:0;padding:8px 16px;background:var(--panel);border-top:1px solid rgba(255,255,255,0.1);font-size:calc(14px + var(--fs,0px));text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center}
 #hint-bar span{opacity:0.7}
@@ -46,6 +46,8 @@ canvas{display:block;width:100%;height:100%}
 #complete-banner p{font-size:calc(18px + var(--fs,0px));margin-bottom:20px}
 #footer{position:absolute;bottom:4px;right:8px;font-size:11px;opacity:0.4;pointer-events:none}
 </style>
+<meta name="description" content="磁力探險實驗 — 互動學習磁鐵、磁場、兩極相吸相斥 | 匡智張玉瓊晨輝學校">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>">
 </head>
 <body>
 <div id="app">
@@ -57,9 +59,9 @@ canvas{display:block;width:100%;height:100%}
    <input type="range" id="fontSlider" min="0" max="16" value="0">
    <span>A</span>
   </div>
-  <button class="icon-btn" id="btnSound" title="語音提示">🔊</button>
-  <button class="icon-btn" id="btnField" title="磁場線">📊</button>
-  <button class="icon-btn" id="btnReset" title="重置">🔄</button>
+  <button class="icon-btn" id="btnSound" title="語音提示" aria-label="語音提示">🔊</button>
+  <button class="icon-btn" id="btnField" title="磁場線" aria-label="磁場線">📊</button>
+  <button class="icon-btn" id="btnReset" title="重置" aria-label="重置">🔄</button>
  </div>
  <div id="main">
   <div id="sidebar"></div>
@@ -67,8 +69,8 @@ canvas{display:block;width:100%;height:100%}
    <canvas id="canvas"></canvas>
    <div id="level-info"><h2>關卡 1</h2><p>拖動磁鐵，吸起鐵釘！</p></div>
    <div id="toolbar">
-    <button class="btn" id="btnPrev">◀ 上一關</button>
-    <button class="btn" id="btnNext">下一關 ▶</button>
+    <button class="btn" id="btnPrev" aria-label="上一關">◀ 上一關</button>
+    <button class="btn" id="btnNext" aria-label="下一關">下一關 ▶</button>
    </div>
    <div id="footer">Ken Cheng © 2026 | 匡智張玉瓊晨輝學校</div>
   </div>
@@ -596,6 +598,7 @@ function buildSidebar(){
  levels.forEach((l,i)=>{
   const btn=document.createElement('button');
   btn.className='level-btn';
+  btn.setAttribute('aria-label','關卡'+l.id+'-'+l.name);
   const ln=document.createElement('span');ln.className='level-num';ln.textContent=l.id;
   const lt=document.createElement('span');lt.className='level-name';lt.textContent=l.name;
   btn.appendChild(ln);btn.appendChild(lt);
