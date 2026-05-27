@@ -77,7 +77,7 @@ canvas{display:block;width:100%;height:100%}
  <div id="complete-banner">
   <h2>🎉 完成！</h2>
   <p id="bannerText">太棒了！</p>
-  <button class="btn" onclick="nextLevelBanner()">下一關 ▶</button>
+  <button class="btn" id="btnBannerNext">下一關 ▶</button>
  </div>
 </div>
 
@@ -462,8 +462,11 @@ function playSpeech(text){
 function initLevel(lv){
  fieldLineDirty=true;
  if(levelCompleteTimer)clearTimeout(levelCompleteTimer);
- const info=document.getElementById('level-info');
- info.innerHTML=`<h2>關卡 ${levels[lv].id}</h2><p>${levels[lv].desc}</p><p style="margin-top:6px;color:var(--accent)">任務：${levels[lv].task}</p>`;
+ info.textContent='';
+ const h2=document.createElement('h2');h2.textContent='關卡 '+levels[lv].id;
+ const p1=document.createElement('p');p1.textContent=levels[lv].desc;
+ const p2=document.createElement('p');p2.style.cssText='margin-top:6px;color:var(--accent)';p2.textContent='任務：'+levels[lv].task;
+ info.appendChild(h2);info.appendChild(p1);info.appendChild(p2);
  document.querySelector('#hint-bar span').textContent=levels[lv].hint;
  magnets=[];compassNeedles=[];ironObjects=[];plasticBeads=[];
  if(lv===0){
@@ -593,7 +596,9 @@ function buildSidebar(){
  levels.forEach((l,i)=>{
   const btn=document.createElement('button');
   btn.className='level-btn';
-  btn.innerHTML=`<span class="level-num">${l.id}</span><span class="level-name">${l.name}</span>`;
+  const ln=document.createElement('span');ln.className='level-num';ln.textContent=l.id;
+  const lt=document.createElement('span');lt.className='level-name';lt.textContent=l.name;
+  btn.appendChild(ln);btn.appendChild(lt);
   btn.addEventListener('click',()=>{currentLevel=i;initLevel(i)});
   sb.appendChild(btn);
  });
@@ -610,6 +615,7 @@ document.getElementById('btnField').addEventListener('click',function(){
  this.classList.toggle('active',showFieldLines);
 });
 document.getElementById('btnReset').addEventListener('click',()=>initLevel(currentLevel));
+document.getElementById('btnBannerNext').addEventListener('click',nextLevelBanner);
 document.getElementById('btnPrev').addEventListener('click',()=>{
  if(currentLevel>0){currentLevel--;initLevel(currentLevel)}
 });
