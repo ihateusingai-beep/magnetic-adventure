@@ -95,6 +95,7 @@ const levels=[
 let currentLevel=0,speechEnabled=true,showFieldLines=true;
 let magnets=[],compassNeedles=[],ironObjects=[],plasticBeads=[];
 let fieldLineCache=null,fieldLineDirty=true;
+let studentInteracted=false;
 
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
@@ -405,21 +406,38 @@ function checkLevelComplete(){
    },1200);
   }
  }else if(currentLevel===1){
-  let count=0;
-  for(const n of compassNeedles){
-   const angle=((n.angle||0)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
-   if(angle<Math.PI*0.3||angle>Math.PI*1.7)count++;
+  // 認識兩極：需要拖動磁鐵改變羅盤針方向才算完成
+  if(studentInteracted){
+   let count=0;
+   for(const n of compassNeedles){
+    const ta=getTargetAngle(n);
+    let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+    if(Math.abs(diff)>Math.PI/4)count++;
+   }
+   if(count>=Math.floor(compassNeedles.length*0.6))autoNextLevel('你發現咗！磁鐵兩端既力量最強！');
   }
-  if(count>=compassNeedles.length)autoNextLevel('你發現咗！磁鐵兩端既力量最強！');
  }else if(currentLevel===2||currentLevel===3){
-  let count=0;
-  for(const n of compassNeedles){
-   const diff=Math.abs((n.angle||0)-Math.PI)<0.5?1:0;
-   count+=diff;
+  // 同極相斥/異極相吸：需要拖動磁鐵才能完成
+  if(studentInteracted){
+   let count=0;
+   for(const n of compassNeedles){
+    const ta=getTargetAngle(n);
+    let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+    if(Math.abs(diff-Math.PI)<Math.PI/4)count++;
+   }
+   if(count>=Math.floor(compassNeedles.length*0.4))autoNextLevel(currentLevel===2?'你發現咗！同極相斥！':'你發現咗！異極相吸！');
   }
-  if(count>=2)autoNextLevel(currentLevel===2?'你發現咗！同極相斥！':'你發現咗！異極相吸！');
  }else if(currentLevel===4){
-  autoNextLevel('你發現咗！地球係大磁鐵，永遠指向北方！');
+  // 指南針：需要拖動磁鐵干擾地球磁場才能完成
+  if(studentInteracted){
+   let disturbed=0;
+   for(const n of compassNeedles){
+    const ta=getTargetAngle(n);
+    let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+    if(Math.abs(diff)>Math.PI/6)disturbed++;
+   }
+   if(disturbed>=Math.floor(compassNeedles.length*0.4))autoNextLevel('你發現咗！地球係大磁鐵，永遠指向北方！');
+  }
  }
 }
 let levelCompleteTimer=null;
@@ -463,6 +481,7 @@ function playSpeech(text){
 
 function initLevel(lv){
  fieldLineDirty=true;
+ studentInteracted=false;
  if(levelCompleteTimer)clearTimeout(levelCompleteTimer);
  const info=document.getElementById('level-info');
  info.textContent='';
@@ -568,7 +587,7 @@ function setCursor(x,y){
 canvas.addEventListener('mousedown',e=>{
  const{tX:tX,tY:tY}=pointerPos(e);
  drag=hitTestMagnet(tX,tY);
- if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;canvas.style.cursor='grabbing'}
+ if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;canvas.style.cursor='grabbing';studentInteracted=true}
 });
 canvas.addEventListener('mousemove',e=>{
  const{tX:tX,tY:tY}=pointerPos(e);
@@ -582,7 +601,7 @@ canvas.addEventListener('touchstart',e=>{
  e.preventDefault();
  const{tX:tX,tY:tY}=pointerPos(e);
  drag=hitTestMagnet(tX,tY);
- if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y}
+ if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;studentInteracted=true}
 },{passive:false});
 canvas.addEventListener('touchmove',e=>{
  e.preventDefault();
