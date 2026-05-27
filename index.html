@@ -398,12 +398,7 @@ function checkLevelComplete(){
  if(currentLevel===0){
   const remaining=ironObjects.filter(o=>!o.collected);
   if(remaining.length===0){
-   levelCompleteTimer=setTimeout(()=>{
-    document.getElementById('complete-banner').style.display='none';
-    if(currentLevel<levels.length-1){
-     currentLevel++;initLevel(currentLevel);
-    }else{playSpeech('恭喜你完成所有關卡！')}
-   },1200);
+   showComplete('你收集晒所有鐵器了！準備進入下一關！');
   }
  }else if(currentLevel===1){
   // 認識兩極：需要拖動磁鐵改變羅盤針方向才算完成
@@ -414,7 +409,7 @@ function checkLevelComplete(){
     let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
     if(Math.abs(diff)>Math.PI/4)count++;
    }
-   if(count>=Math.floor(compassNeedles.length*0.6))autoNextLevel('你發現咗！磁鐵兩端既力量最強！');
+   if(count>=Math.floor(compassNeedles.length*0.6))showComplete('你發現咗！磁鐵兩端既力量最強！');
   }
  }else if(currentLevel===2||currentLevel===3){
   // 同極相斥/異極相吸：需要拖動磁鐵才能完成
@@ -425,7 +420,7 @@ function checkLevelComplete(){
     let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
     if(Math.abs(diff-Math.PI)<Math.PI/4)count++;
    }
-   if(count>=Math.floor(compassNeedles.length*0.4))autoNextLevel(currentLevel===2?'你發現咗！同極相斥！':'你發現咗！異極相吸！');
+   if(count>=Math.floor(compassNeedles.length*0.4))showComplete(currentLevel===2?'你發現咗！同極相斥！':'你發現咗！異極相吸！');
   }
  }else if(currentLevel===4){
   // 指南針：需要拖動磁鐵干擾地球磁場才能完成
@@ -436,7 +431,7 @@ function checkLevelComplete(){
     let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
     if(Math.abs(diff)>Math.PI/6)disturbed++;
    }
-   if(disturbed>=Math.floor(compassNeedles.length*0.4))autoNextLevel('你發現咗！地球係大磁鐵，永遠指向北方！');
+   if(disturbed>=Math.floor(compassNeedles.length*0.4))showComplete('你發現咗！地球係大磁鐵，永遠指向北方！');
   }
  }
 }
@@ -460,6 +455,7 @@ function showComplete(text){
 
 function nextLevelBanner(){
  document.getElementById('complete-banner').style.display='none';
+ studentInteracted=false;
  if(currentLevel<levels.length-1){
   currentLevel++;
   initLevel(currentLevel);
