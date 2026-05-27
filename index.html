@@ -546,7 +546,7 @@ function hitTestMagnet(x,y){
 function hitTestIron(x,y){
  for(let i=0;i<ironObjects.length;i++){
   const o=ironObjects[i];
-  if(o.gone)continue;
+  if(o.collected)continue;
   if(Math.abs(x-o.x)<20&&Math.abs(y-o.y)<10)return ironObjects[i];
  }
  return null;
@@ -560,12 +560,12 @@ function setCursor(x,y){
 }
 
 canvas.addEventListener('mousedown',e=>{
- const{x:tX,tY}=pointerPos(e);
+ const{tX:tX,tY:tY}=pointerPos(e);
  drag=hitTestMagnet(tX,tY);
  if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;canvas.style.cursor='grabbing'}
 });
 canvas.addEventListener('mousemove',e=>{
- const{x:tX,tY}=pointerPos(e);
+ const{tX:tX,tY:tY}=pointerPos(e);
  setCursor(tX,tY);
  if(drag===null)return;
  drag.x=tX-dragOffX;drag.y=tY-dragOffY;
@@ -574,14 +574,14 @@ canvas.addEventListener('mousemove',e=>{
 canvas.addEventListener('mouseup',()=>{drag=null;canvas.style.cursor='default'});
 canvas.addEventListener('touchstart',e=>{
  e.preventDefault();
- const{x:tX,tY}=pointerPos(e);
+ const{tX:tX,tY:tY}=pointerPos(e);
  drag=hitTestMagnet(tX,tY);
  if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y}
 },{passive:false});
 canvas.addEventListener('touchmove',e=>{
  e.preventDefault();
  if(drag===null)return;
- const{x:tX,tY}=pointerPos(e);
+ const{tX:tX,tY:tY}=pointerPos(e);
  drag.x=tX-dragOffX;drag.y=tY-dragOffY;
  fieldLineDirty=true;
 },{passive:false});
