@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>磁力探險實驗</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#1a1a2e;--grid:#2a2a4a;--table:#8B7355;
+--n:#e63946;--s:#457b9d;--iron:#a8dadc;--field:#ffd166;
+--accent:#06d6a0;--text:#f1faee;--panel:rgba(255,255,255,0.08);
+--needle:#c0c0c0;--wood-light:#a08060;--wood-dark:#6b5030;
+}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text)}
+#app{display:flex;flex-direction:column;height:100vh}
+#header{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.1)}
+#header h1{font-size:calc(16px + var(--fs,0px));font-weight:700;white-space:nowrap}
+.flex{flex:1}
+.btn{background:var(--accent);border:none;border-radius:10px;color:#000;padding:10px 16px;font-size:calc(14px + var(--fs,0px));font-weight:700;cursor:pointer;min-height:48px;min-width:48px;transition:transform 0.1s,opacity 0.1s;touch-action:manipulation}
+.btn:active{transform:scale(0.95)}
+.btn.off{background:#555;color:#aaa}
+.icon-btn{font-size:24px;background:transparent;border:2px solid var(--accent);border-radius:10px;min-width:48px;min-height:48px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+.icon-btn:hover{background:rgba(6,214,160,0.2)}
+.icon-btn.active{background:var(--accent)}
+.slider-wrap{display:flex;align-items:center;gap:6px;font-size:calc(12px + var(--fs,0px))}
+input[type=range]{width:80px;accent-color:var(--accent)}
+#main{display:flex;flex:1;overflow:hidden}
+#sidebar{width:120px;flex-shrink:0;background:var(--panel);display:flex;flex-direction:column;gap:8px;padding:10px;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.1)}
+.level-btn{background:rgba(255,255,255,0.05);border:2px solid transparent;border-radius:10px;color:var(--text);padding:10px 8px;font-size:calc(12px + var(--fs,0px));font-weight:600;cursor:pointer;text-align:center;min-height:60px;transition:all 0.2s;word-break:keep-all}
+.level-btn.selected{border-color:var(--accent);background:rgba(6,214,160,0.15)}
+.level-btn:hover{background:rgba(255,255,255,0.1)}
+.level-btn.completed{background:rgba(6,214,160,0.2);border-color:var(--accent)}
+.level-num{display:block;font-size:calc(18px + var(--fs,0px));font-weight:700;color:var(--accent)}
+.level-name{display:block;font-size:calc(10px + var(--fs,0px));margin-top:4px;line-height:1.2}
+#canvas-wrap{flex:1;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#toolbar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:8px;background:var(--panel);backdrop-filter:blur(8px);border-radius:16px;border:1px solid rgba(255,255,255,0.1)}
+#hint-bar{flex-shrink:0;padding:8px 16px;background:var(--panel);border-top:1px solid rgba(255,255,255,0.1);font-size:calc(14px + var(--fs,0px));text-align:center;min-height:48px;display:flex;align-items:center;justify-content:center}
+#hint-bar span{opacity:0.7}
+#level-info{position:absolute;top:16px;left:16px;background:var(--panel);backdrop-filter:blur(8px);border-radius:12px;padding:12px 16px;border:1px solid rgba(255,255,255,0.1);max-width:260px;font-size:calc(13px + var(--fs,0px))}
+#level-info h2{font-size:calc(16px + var(--fs,0px));margin-bottom:6px;color:var(--accent)}
+#level-info p{opacity:0.8;line-height:1.4}
+#complete-banner{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);border:3px solid var(--accent);border-radius:20px;padding:30px 40px;text-align:center;z-index:100}
+#complete-banner h2{font-size:calc(28px + var(--fs,0px));color:var(--accent);margin-bottom:10px}
+#complete-banner p{font-size:calc(18px + var(--fs,0px));margin-bottom:20px}
+#footer{position:absolute;bottom:4px;right:8px;font-size:11px;opacity:0.4;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="app">
+ <div id="header">
+  <h1>🔬 磁力探險</h1>
+  <div class="flex"></div>
+  <div class="slider-wrap">
+   <span>A</span>
+   <input type="range" id="fontSlider" min="0" max="16" value="0">
+   <span>A</span>
+  </div>
+  <button class="icon-btn" id="btnSound" title="語音提示">🔊</button>
+  <button class="icon-btn" id="btnField" title="磁場線">📊</button>
+  <button class="icon-btn" id="btnReset" title="重置">🔄</button>
+ </div>
+ <div id="main">
+  <div id="sidebar"></div>
+  <div id="canvas-wrap">
+   <canvas id="canvas"></canvas>
+   <div id="level-info"><h2>關卡 1</h2><p>拖動磁鐵，吸起鐵釘！</p></div>
+   <div id="toolbar">
+    <button class="btn" id="btnPrev">◀ 上一關</button>
+    <button class="btn" id="btnNext">下一關 ▶</button>
+   </div>
+   <div id="footer">Ken Cheng © 2026 | 匡智張玉瓊晨輝學校</div>
+  </div>
+ </div>
+ <div id="hint-bar"><span>拖動磁鐵 · 觀察羅盤針方向</span></div>
+ <div id="complete-banner">
+  <h2>🎉 完成！</h2>
+  <p id="bannerText">太棒了！</p>
+  <button class="btn" onclick="nextLevelBanner()">下一關 ▶</button>
+ </div>
+</div>
+
+<script>
+(function(){
+const levels=[
+{id:1,name:'磁鐵吸邊個？',hint:'拖動磁鐵去吸鐵釘！',desc:'磁鐵可以吸鐵製品，但唔吸塑膠。',task:'用磁鐵吸起所有鐵釘（灰色），避開塑膠珠（彩色）'},
+{id:2,name:'認識兩極',hint:'睇羅盤針點轉',desc:'磁鐵有兩極：紅色N極、藍色S極。',task:'摆放磁鐵，觀察周圍羅盤針既指向方向'},
+{id:3,name:'同極相斥',hint:'同極互相推開',desc:'N極同N極會互相推開，S極同S極都係。',task:'將兩塊磁鐵既同極擺近，觀察羅盤針既反應'},
+{id:4,name:'異極相吸',hint:'異極互相吸引',desc:'N極會被S極吸引，就好似好朋友咁。',task:'將N極同S極擺近，觀察羅盤針既反應'},
+{id:5,name:'指南針',hint:'指向北方',desc:'地球本身就係一塊大磁鐵，所以羅盤針永遠指向北方。',task:'羅盤針永遠指向北方（→），試下移動磁鐵干擾佢！'}
+];
+let currentLevel=0,speechEnabled=true,showFieldLines=true;
+let magnets=[],compassNeedles=[],ironObjects=[];
+let fieldLineCache=null,fieldLineDirty=true;
+
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+let W,H,dpr;
+
+function resize(){
+ dpr=window.devicePixelRatio||1;
+ const wrap=document.getElementById('canvas-wrap');
+ W=wrap.clientWidth;H=wrap.clientHeight;
+ canvas.width=W*dpr;canvas.height=H*dpr;
+ canvas.style.width=W+'px';canvas.style.height=H+'px';
+ ctx.scale(dpr,dpr);
+}
+window.addEventListener('resize',resize);
+resize();
+
+function lerp(a,b,t){return a+(b-a)*t}
+function atan2(y,x){return Math.atan2(y,x)}
+function dist(x1,y1,x2,y2){return Math.hypot(x2-x1,y2-y1)}
+
+function getMagField(x,y){
+ let bx=0,by=0;
+ for(const m of magnets){
+  const dx=x-m.x,dy=y-m.y;
+  const d=Math.max(10,Math.hypot(dx,dy));
+  const k=5000;
+  const len=Math.pow(d,3);
+  const mx=m.dir?'N':'S';
+  const sgn=m.dir?1:-1;
+  const rdx=dx/d,rdy=dy/d;
+  const mdotr=rdx*sgn;
+  const tx=k/len*(3*(sgn*mdotr)*rdx-sgn);
+  const ty=k/len*(3*(sgn*mdotr)*rdy-0);
+  bx+=tx;by+=ty;
+ }
+ if(currentLevel===4){
+  bx+=800;by+=0;
+ }
+ return {bx,by};
+}
+
+function computeFieldLines(){
+ const lines=[];
+ for(const m of magnets){
+  const pole=m.dir;
+  const px=m.x,py=m.y;
+  const startAngle=Math.atan2(py-H/2,px-W/2);
+  const count=20;
+  for(let i=0;i<count;i++){
+   const baseAngle=-Math.PI+i*(2*Math.PI/count)+0.05;
+   const angle=baseAngle+(Math.random()-0.5)*0.08;
+   const sp=8;
+   const sx=px+Math.cos(angle)*sp;
+   const sy=py+Math.sin(angle)*sp;
+   const pts=traceLine(sx,sy,pole);
+   if(pts.length>2)lines.push(pts);
+  }
+ }
+ return lines;
+}
+
+function traceLine(sx,sy,pole){
+ const pts=[{x:sx,y:sy}];
+ const step=4,maxStep=600;
+ const noise=0.3;
+ let x=sx,y=sy,px=sx,py=sy;
+ for(let i=0;i<maxStep;i++){
+  const {bx,by}=getMagField(x,y);
+  const len=Math.hypot(bx,by);
+  if(len<0.001)break;
+  const nx=bx/len,ny=by/len;
+  const jx=nx+(Math.random()-0.5)*noise;
+  const jy=ny+(Math.random()-0.5)*noise;
+  const jlen=Math.hypot(jx,jy);
+  const vx=jx/jlen,vy=jy/jlen;
+  px=x;py=y;
+  x+=vx*step;
+  y+=vy*step;
+  if(x<0||x>W||y<0||y>H)break;
+  let hitPole=null;
+  for(const m of magnets){
+   const d=dist(x,y,m.x,m.y);
+   if(d<22){
+    if(pole&&!m.dir){hitPole='S';break}
+    if(!pole&&m.dir){hitPole='N';break}
+   }
+  }
+  if(hitPole){pts.push({x,y});break}
+  if(i%3===0)pts.push({x,y});
+ }
+ return pts;
+}
+
+function drawFieldLines(lines){
+ ctx.save();
+ ctx.strokeStyle='rgba(255,209,102,0.55)';
+ ctx.lineWidth=2;
+ ctx.setLineDash([]);
+ for(const pts of lines){
+  if(pts.length<3)continue;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length-1;i++){
+   const mx=(pts[i].x+pts[i+1].x)/2;
+   const my=(pts[i].y+pts[i+1].y)/2;
+   ctx.quadraticCurveTo(pts[i].x,pts[i].y,mx,my);
+  }
+  ctx.lineTo(pts[pts.length-1].x,pts[pts.length-1].y);
+  ctx.stroke();
+  if(pts.length>4){
+   const last=pts[pts.length-1];
+   const prev=pts[pts.length-2];
+   const angle=Math.atan2(last.y-prev.y,last.x-prev.x);
+   drawArrow(last.x,last.y,angle);
+  }
+ }
+ ctx.restore();
+}
+
+function drawArrow(x,y,angle){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.rotate(angle);
+ ctx.fillStyle='rgba(255,209,102,0.8)';
+ ctx.beginPath();
+ ctx.moveTo(8,0);
+ ctx.lineTo(-5,5);
+ ctx.lineTo(-5,-5);
+ ctx.closePath();
+ ctx.fill();
+ ctx.restore();
+}
+
+function drawBackground(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,'#1a1a2e');
+ g.addColorStop(1,'#16213e');
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle='rgba(42,42,74,0.5)';
+ ctx.lineWidth=1;
+ const grid=40;
+ for(let x=0;x<=W;x+=grid){
+  ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+ }
+ for(let y=0;y<=H;y+=grid){
+  ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+ }
+ const tg=ctx.createLinearGradient(0,H*0.7,0,H);
+ tg.addColorStop(0,'#8B7355');
+ tg.addColorStop(0.5,'#a08060');
+ tg.addColorStop(1,'#6b5030');
+ ctx.fillStyle=tg;
+ ctx.fillRect(0,H*0.72,W,H*0.28);
+ ctx.strokeStyle='rgba(0,0,0,0.1)';
+ ctx.lineWidth=1;
+ for(let x=0;x<=W;x+=30){
+  ctx.beginPath();ctx.moveTo(x,H*0.72);ctx.lineTo(x,H);ctx.stroke();
+ }
+}
+
+function drawCompass(x,y,angle,needleLen){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.fillStyle='rgba(0,0,0,0.3)';
+ ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke();
+ ctx.rotate(angle);
+ ctx.fillStyle='var(--n)';ctx.strokeStyle='var(--n)';
+ ctx.beginPath();ctx.moveTo(needleLen/2,0);ctx.lineTo(0,3);ctx.lineTo(-needleLen/2,0);ctx.lineTo(0,-3);ctx.closePath();ctx.fill();
+ ctx.fillStyle='var(--s)';ctx.strokeStyle='var(--s)';
+ ctx.beginPath();ctx.moveTo(-needleLen/2,0);ctx.lineTo(0,3);ctx.lineTo(needleLen/2,0);ctx.lineTo(0,-3);ctx.closePath();ctx.fill();
+ ctx.restore();
+}
+
+function drawMagnet(x,y,dir){
+ ctx.save();
+ ctx.translate(x,y);
+ const w=80,h=30,r=8;
+ ctx.fillStyle='#aaa';
+ ctx.beginPath();
+ roundRect(-w/2,-h/2,w,h,r);ctx.fill();
+ ctx.fillStyle=dir?'#e63946':'#457b9d';
+ ctx.beginPath();roundRect(-w/2,-h/2,w/2,h,r,['tl','bl']);ctx.fill();
+ ctx.fillStyle=dir?'#b0202f':'#2d5a7b';
+ ctx.beginPath();roundRect(0,-h/2,w/2,h,r,['tr','br']);ctx.fill();
+ ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillText(dir?'N':'S',dir?-w/4:w/4,0);
+ ctx.restore();
+}
+
+function roundRect(x,y,w,h,r,corners){
+ ctx.beginPath();
+ const tl=corners&&corners.includes('tl');
+ const tr=corners&&corners.includes('tr');
+ const bl=corners&&corners.includes('bl');
+ const br=corners&&corners.includes('br');
+ ctx.moveTo(x+r,y);
+ if(tl)ctx.arcTo(x,y,x,y+r,r);else ctx.lineTo(x,y);
+ ctx.lineTo(x+w-(r),y);
+ if(tr)ctx.arcTo(x+w,y,x+w,y+r,r);else ctx.lineTo(x+w,y);
+ ctx.lineTo(x+w,y+h-r);
+ if(br)ctx.arcTo(x+w,y+h,x+w-r,y+h,r);else ctx.lineTo(x+w,y+h);
+ ctx.lineTo(x+r,y+h);
+ if(bl)ctx.arcTo(x,y+h,x,y+h-r,r);else ctx.lineTo(x,y+h);
+ ctx.closePath();
+}
+
+function drawIron(obj){
+ if(obj.gone)return;
+ ctx.save();
+ ctx.translate(obj.x,obj.y);
+ ctx.rotate(obj.r||0);
+ if(obj.type==='nail'){
+  ctx.fillStyle='#a8dadc';ctx.strokeStyle='#7bb8ba';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(-18,-4,36,8,3);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#888';
+  ctx.beginPath();ctx.arc(-18,0,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-18,0,2,0,Math.PI*2);ctx.fill();
+ }else{
+  ctx.strokeStyle='#a8dadc';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-10,-8);ctx.lineTo(-10,8);ctx.lineTo(10,8);ctx.lineTo(10,-8);ctx.stroke();
+ }
+ ctx.restore();
+}
+
+function drawUI(){
+ ctx.fillStyle='rgba(255,255,255,0.15)';
+ ctx.font='12px sans-serif';ctx.textAlign='right';
+ ctx.fillText('🧲',12,26);
+ ctx.textAlign='left';
+ ctx.fillText('磁場線：'+(showFieldLines?'開':'關'),12,44);
+}
+
+function getTargetAngle(n){
+ const {bx,by}=getMagField(n.x,n.y);
+ if(Math.hypot(bx,by)<0.5)return n.targetAngle||n.angle;
+ n.targetAngle=Math.atan2(by,bx);
+ return n.targetAngle;
+}
+
+function updateNeedles(){
+ for(const n of compassNeedles){
+  const ta=getTargetAngle(n);
+  let diff=ta-(n.angle||0);
+  while(diff>Math.PI)diff-=Math.PI*2;
+  while(diff<-Math.PI)diff+=Math.PI*2;
+  n.angle=(n.angle||0)+diff*0.12;
+ }
+}
+
+function updateIron(){
+ for(const obj of ironObjects){
+  let fx=0,fy=0;
+  for(const m of magnets){
+   const d=dist(obj.x,obj.y,m.x,m.y);
+   if(d<40&&obj.type==='nail'){obj.gone=true;obj.vx=0;obj.vy=0;continue}
+   if(d<80){
+    const angle=Math.atan2(obj.y-m.y,obj.x-m.x);
+    const force=(80-d)/80*3;
+    const {bx,by}=getMagField(obj.x,obj.y);
+    const {bx:mbx,by:mby}=getMagField(m.x,m.y);
+    const sgn=m.dir?1:-1;
+    const push=Math.hypot(mbx,mby)>Math.hypot(bx,by);
+    if(push){
+     fx-=Math.cos(angle)*force*1.5;
+     fy-=Math.sin(angle)*force*1.5;
+    }else{
+     fx+=Math.cos(angle)*force;
+     fy+=Math.sin(angle)*force;
+    }
+   }
+  }
+  obj.vx=lerp(obj.vx||0,fx,0.05);
+  obj.vy=lerp(obj.vy||0,fy,0.05);
+  obj.x+=obj.vx||0;
+  obj.y+=obj.vy||0;
+  obj.x=Math.max(20,Math.min(W-20,obj.x));
+  obj.y=Math.max(20,Math.min(H-20,obj.y));
+  obj.r=(obj.r||0)+(obj.vx||0)*0.05;
+ }
+}
+
+function checkLevelComplete(){
+ if(currentLevel===0){
+  const nails=ironObjects.filter(o=>o.type==='nail'&&!o.gone);
+  if(nails.length===0){
+   showComplete('太棒了！磁鐵吸起晒所有鐵釘！');
+  }
+ }else if(currentLevel===1){
+  let count=0;
+  for(const n of compassNeedles){
+   const angle=((n.angle||0)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+   if(angle<Math.PI*0.3||angle>Math.PI*1.7)count++;
+  }
+  if(count>=compassNeedles.length){
+   showComplete('你發現咗！磁鐵兩端既力量最強！');
+  }
+ }else if(currentLevel===2||currentLevel===3){
+  let count=0;
+  for(const n of compassNeedles){
+   const diff=Math.abs((n.angle||0)-Math.PI)<0.5?1:0;
+   count+=diff;
+  }
+  if(count>=2){
+   showComplete(currentLevel===2?'你發現咗！同極相斥！':'你發現咗！異極相吸！');
+  }
+ }else if(currentLevel===4){
+  showComplete('你發現咗！地球係大磁鐵，永遠指向北方！');
+ }
+}
+
+function showComplete(text){
+ const banner=document.getElementById('complete-banner');
+ document.getElementById('bannerText').textContent=text;
+ banner.style.display='block';
+ playSpeech(text);
+ const btns=document.querySelectorAll('.level-btn');
+ if(btns[currentLevel])btns[currentLevel].classList.add('completed');
+}
+
+function nextLevelBanner(){
+ document.getElementById('complete-banner').style.display='none';
+ if(currentLevel<levels.length-1){
+  currentLevel++;
+  initLevel(currentLevel);
+ }else{
+  playSpeech('恭喜你完成所有關卡！');
+ }
+}
+
+function playSpeech(text){
+ if(!speechEnabled)return;
+ if('speechSynthesis' in window){
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='zh-HK';
+  u.rate=0.9;
+  window.speechSynthesis.speak(u);
+ }
+}
+
+function initLevel(lv){
+ fieldLineDirty=true;
+ const info=document.getElementById('level-info');
+ info.innerHTML=`<h2>關卡 ${levels[lv].id}</h2><p>${levels[lv].desc}</p><p style="margin-top:6px;color:var(--accent)">任務：${levels[lv].task}</p>`;
+ document.querySelector('#hint-bar span').textContent=levels[lv].hint;
+ magnets=[];compassNeedles=[];ironObjects=[];
+ if(lv===0){
+  magnets.push({x:W*0.7,y:H*0.5,dir:true});
+  const pos=[{x:W*0.2,y:H*0.3},{x:W*0.3,y:H*0.7},{x:W*0.5,y:H*0.5},{x:W*0.7,y:H*0.3},{x:W*0.5,y:H*0.7}];
+  for(const p of pos)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
+  const nailPos=[{x:W*0.2,y:H*0.4},{x:W*0.4,y:H*0.6},{x:W*0.6,y:H*0.4}];
+  for(const p of nailPos)ironObjects.push({x:p.x,y:p.y,vx:0,vy:0,type:'nail',r:0});
+ }else if(lv===1){
+ }else if(lv===2){
+  magnets.push({x:W*0.3,y:H*0.5,dir:true});
+  magnets.push({x:W*0.7,y:H*0.5,dir:true});
+  const positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
+  for(const p of positions)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
+ }else if(lv===3){
+  magnets.push({x:W*0.3,y:H*0.5,dir:true});
+  magnets.push({x:W*0.7,y:H*0.5,dir:false});
+  const positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
+  for(const p of positions)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
+ }else if(lv===4){
+  const positions=[
+   {x:W*0.2,y:H*0.3},{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.8,y:H*0.3},
+   {x:W*0.2,y:H*0.5},{x:W*0.4,y:H*0.5},{x:W*0.6,y:H*0.5},{x:W*0.8,y:H*0.5},
+   {x:W*0.2,y:H*0.7},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7},{x:W*0.8,y:H*0.7}
+  ];
+  for(const p of positions)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
+  setTimeout(()=>playSpeech('地球磁場已經設定好，羅盤針永遠指向北方'),500);
+ }
+ const btns=document.querySelectorAll('.level-btn');
+ btns.forEach((b,i)=>b.classList.toggle('selected',i===lv));
+ setTimeout(()=>playSpeech(levels[lv].task),800);
+}
+
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ drawBackground();
+ if(showFieldLines){
+  if(fieldLineDirty||!fieldLineCache){
+   fieldLineCache=computeFieldLines();
+   fieldLineDirty=false;
+  }
+  drawFieldLines(fieldLineCache);
+ }
+ for(const obj of ironObjects)drawIron(obj);
+ for(const n of compassNeedles)drawCompass(n.x,n.y,n.angle||0,22);
+ for(const m of magnets)drawMagnet(m.x,m.y,m.dir);
+ drawUI();
+ updateNeedles();
+ updateIron();
+ requestAnimationFrame(draw);
+ checkLevelComplete();
+}
+
+let drag=null,dragOffX=0,dragOffY=0;
+
+function pointerPos(e){
+ const r=canvas.getBoundingClientRect();
+ const t=e.touches?e.touches[0]:e;
+ return{tX:t.clientX-r.left,tY:t.clientY-r.top};
+}
+
+function hitTestMagnet(x,y){
+ for(let i=0;i<magnets.length;i++){
+  const m=magnets[i];
+  if(Math.abs(x-m.x)<40&&Math.abs(y-m.y)<20)return i;
+ }
+ return-1;
+}
+
+canvas.addEventListener('mousedown',e=>{
+ const{x:tX,tY}=pointerPos(e);
+ const idx=hitTestMagnet(tX,tY);
+ if(idx>=0){drag=idx;dragOffX=tX-magnets[idx].x;dragOffY=tY-magnets[idx].y;canvas.style.cursor='grabbing'}
+});
+canvas.addEventListener('mousemove',e=>{
+ if(drag===null)return;
+ const{x:tX,tY}=pointerPos(e);
+ magnets[drag].x=tX-dragOffX;magnets[drag].y=tY-dragOffY;
+ fieldLineDirty=true;
+});
+canvas.addEventListener('mouseup',()=>{drag=null;canvas.style.cursor='default'});
+canvas.addEventListener('touchstart',e=>{
+ e.preventDefault();
+ const{x:tX,tY}=pointerPos(e);
+ const idx=hitTestMagnet(tX,tY);
+ if(idx>=0){drag=idx;dragOffX=tX-magnets[idx].x;dragOffY=tY-magnets[idx].y}
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+ e.preventDefault();
+ if(drag===null)return;
+ const{x:tX,tY}=pointerPos(e);
+ magnets[drag].x=tX-dragOffX;magnets[drag].y=tY-dragOffY;
+ fieldLineDirty=true;
+},{passive:false});
+canvas.addEventListener('touchend',()=>{drag=null});
+
+function buildSidebar(){
+ const sb=document.getElementById('sidebar');
+ sb.innerHTML='';
+ levels.forEach((l,i)=>{
+  const btn=document.createElement('button');
+  btn.className='level-btn';
+  btn.innerHTML=`<span class="level-num">${l.id}</span><span class="level-name">${l.name}</span>`;
+  btn.addEventListener('click',()=>{currentLevel=i;initLevel(i)});
+  sb.appendChild(btn);
+ });
+}
+
+document.getElementById('btnSound').addEventListener('click',function(){
+ speechEnabled=!speechEnabled;
+ this.classList.toggle('active',speechEnabled);
+ this.textContent=speechEnabled?'🔊':'🔇';
+ if(!speechEnabled)window.speechSynthesis.cancel();
+});
+document.getElementById('btnField').addEventListener('click',function(){
+ showFieldLines=!showFieldLines;
+ this.classList.toggle('active',showFieldLines);
+});
+document.getElementById('btnReset').addEventListener('click',()=>initLevel(currentLevel));
+document.getElementById('btnPrev').addEventListener('click',()=>{
+ if(currentLevel>0){currentLevel--;initLevel(currentLevel)}
+});
+document.getElementById('btnNext').addEventListener('click',()=>{
+ if(currentLevel<levels.length-1){currentLevel++;initLevel(currentLevel)}
+});
+document.getElementById('fontSlider').addEventListener('input',function(){
+ document.documentElement.style.setProperty('--fs',this.value+'px');
+});
+
+buildSidebar();
+initLevel(0);
+document.getElementById('btnField').classList.add('active');
+document.getElementById('btnSound').classList.add('active');
+draw();
+})();
+</script>
+</body>
+</html>
