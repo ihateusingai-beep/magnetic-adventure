@@ -546,20 +546,18 @@ function draw(){
  checkLevelComplete();
 }
 
-let drag=null,dragOffX=0,dragOffY=0;
+let drag=null,dragOffX=0,dragOffY=0,hoverObj=null;
 
 function pointerPos(e){
  const r=canvas.getBoundingClientRect();
  const t=e.touches?e.touches[0]:e;
- const scaleX=canvas.width/r.width;
- const scaleY=canvas.height/r.height;
- return{tX:(t.clientX-r.left)*scaleX,tY:(t.clientY-r.top)*scaleY};
+ return{x:(t.clientX-r.left)*(canvas.width/r.width/dpr),y:(t.clientY-r.top)*(canvas.height/r.height/dpr)};
 }
 
 function hitTestMagnet(x,y){
  for(let i=0;i<magnets.length;i++){
   const m=magnets[i];
-  if(Math.abs(x-m.x)<40&&Math.abs(y-m.y)<20)return magnets[i];
+  if(Math.abs(x-m.x)<42&&Math.abs(y-m.y)<18)return magnets[i];
  }
  return null;
 }
@@ -568,7 +566,9 @@ function hitTestIron(x,y){
  for(let i=0;i<ironObjects.length;i++){
   const o=ironObjects[i];
   if(o.collected)continue;
-  if(Math.abs(x-o.x)<20&&Math.abs(y-o.y)<10)return ironObjects[i];
+  const halfW=o.type==='nail'?20:12;
+  const halfH=o.type==='nail'?10:8;
+  if(Math.abs(x-o.x)<halfW&&Math.abs(y-o.y)<halfH)return ironObjects[i];
  }
  return null;
 }
@@ -576,7 +576,7 @@ function hitTestIron(x,y){
 function hitTestCompass(x,y){
  for(let i=0;i<compassNeedles.length;i++){
   const n=compassNeedles[i];
-  if(dist(x,y,n.x,n.y)<22)return compassNeedles[i];
+  if(dist(x,y,n.x,n.y)<24)return compassNeedles[i];
  }
  return null;
 }
@@ -584,51 +584,62 @@ function hitTestCompass(x,y){
 function hitTestBead(x,y){
  for(let i=0;i<plasticBeads.length;i++){
   const b=plasticBeads[i];
-  if(dist(x,y,b.x,b.y)<14)return plasticBeads[i];
+  if(dist(x,y,b.x,b.y)<15)return plasticBeads[i];
  }
  return null;
 }
 
-function hitTestAny(x,y){
+function hitTestAll(x,y){
  return hitTestMagnet(x,y)||hitTestIron(x,y)||hitTestCompass(x,y)||hitTestBead(x,y);
 }
 
-function setCursor(x,y){
- canvas.style.cursor=hitTestAny(x,y)?'grab':(drag?'grabbing':'default');
+function setCursor(obj){
+ if(drag)canvas.style.cursor='grabbing';
+ else if(obj)canvas.style.cursor='grab';
+ else canvas.style.cursor='default';
 }
 
-canvas.addEventListener('mousedown',e=>{
- const{tX:tX,tY:tY}=pointerPos(e);
- drag=hitTestMagnet(tX,tY)||hitTestIron(tX,tY)||hitTestCompass(tX,tY)||hitTestBead(tX,tY);
- if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;canvas.style.cursor='grabbing';studentInteracted=true}
-});
-canvas.addEventListener('mousemove',e=>{
- const{tX:tX,tY:tY}=pointerPos(e);
- setCursor(tX,tY);
- if(drag===null)return;
- drag.x=tX-dragOffX;drag.y=tY-dragOffY;
- drag.x=Math.max(20,Math.min(W-20,drag.x));
- drag.y=Math.max(20,Math.min(H-20,drag.y));
- fieldLineDirty=true;
-});
-canvas.addEventListener('mouseup',()=>{drag=null;canvas.style.cursor='default'});
-canvas.addEventListener('touchstart',e=>{
+function startDrag(e){
  e.preventDefault();
- const{tX:tX,tY:tY}=pointerPos(e);
- drag=hitTestMagnet(tX,tY)||hitTestIron(tX,tY)||hitTestCompass(tX,tY)||hitTestBead(tX,tY);
- if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;studentInteracted=true}
-},{passive:false});
-canvas.addEventListener('touchmove',e=>{
- e.preventDefault();
- if(drag===null)return;
- const{tX:tX,tY:tY}=pointerPos(e);
- drag.x=tX-dragOffX;drag.y=tY-dragOffY;
- drag.x=Math.max(20,Math.min(W-20,drag.x));
- drag.y=Math.max(20,Math.min(H-20,drag.y));
- fieldLineDirty=true;
-},{passive:false});
-canvas.addEventListener('touchend',()=>{drag=null});
+ const pt=pointerPos(e);
+ const obj=hitTestAll(pt.x,pt.y);
+ if(obj){
+  drag=obj;
+  dragOffX=pt.x-obj.x;
+  dragOffY=pt.y-obj.y;
+  setCursor(null);
+  studentInteracted=true;
+  fieldLineDirty=true;
+ }
+}
 
+function moveDrag(e){
+ e.preventDefault();
+ const pt=pointerPos(e);
+ if(drag){
+  drag.x=Math.max(20,Math.min(W-20,pt.x-dragOffX));
+  drag.y=Math.max(20,Math.min(H-20,pt.y-dragOffY));
+  fieldLineDirty=true;
+ }else{
+  const obj=hitTestAll(pt.x,pt.y);
+  setCursor(obj);
+ }
+}
+
+function endDrag(e){
+ drag=null;
+ setCursor(null);
+}
+
+canvas.addEventListener('mousedown',startDrag);
+canvas.addEventListener('mousemove',moveDrag);
+canvas.addEventListener('mouseup',endDrag);
+canvas.addEventListener('mouseleave',endDrag);
+
+canvas.addEventListener('touchstart',startDrag,{passive:false});
+canvas.addEventListener('touchmove',moveDrag,{passive:false});
+canvas.addEventListener('touchend',endDrag,{passive:false});
+canvas.addEventListener('touchcancel',endDrag,{passive:false});
 function buildSidebar(){
  const sb=document.getElementById('sidebar');
  sb.innerHTML='';
