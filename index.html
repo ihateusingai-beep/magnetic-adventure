@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>磁力探險實驗</title>
+<meta name="description" content="磁力探險實驗 — 互動學習磁鐵、磁場、兩極相吸相斥 | 匡智張玉瓊晨暉學校">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="author" content="Ken Cheng">
+<meta name="robots" content="index, follow">
+<meta property="og:title" content="磁力探險實驗">
+<meta property="og:description" content="互動學習磁鐵、磁場、兩極相吸相斥 | 匡智張玉瓊晨暉學校">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -53,8 +63,6 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #intro-overlay p{font-size:calc(20px + var(--fs,0px));opacity:0.9;text-align:center;max-width:400px;line-height:1.4}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 </style>
-<meta name="description" content="磁力探險實驗 — 互動學習磁鐵、磁場、兩極相吸相斥 | 匡智張玉瓊晨暉學校">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>">
 </head>
 <body>
 <div id="app">
@@ -99,18 +107,18 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 <script>
 (function(){
 const levels=[
-{id:1,name:'磁鐵吸邊個？',hint:'拖動磁鐵去吸鐵釘！',desc:'磁鐵可以吸鐵製品，但唔吸塑膠。',task:'用磁鐵吸起所有鐵釘（灰色），避開塑膠珠（彩色）'},
-{id:2,name:'認識兩極',hint:'睇羅盤針點轉',desc:'磁鐵有兩極：紅色N極、藍色S極。',task:'摆放磁鐵，觀察周圍羅盤針既指向方向'},
-{id:3,name:'同極相斥',hint:'同極互相推開',desc:'N極同N極會互相推開，S極同S極都係。',task:'將兩塊磁鐵既同極擺近，觀察羅盤針既反應'},
-{id:4,name:'異極相吸',hint:'異極互相吸引',desc:'N極會被S極吸引，就好似好朋友咁。',task:'將N極同S極擺近，觀察羅盤針既反應'},
-{id:5,name:'指南針',hint:'指向北方',desc:'地球本身就係一塊大磁鐵，所以羅盤針永遠指向北方。',task:'羅盤針永遠指向北方（→），試下移動磁鐵干擾佢！'}
+{id:1,name:'磁鐵吸邊個？',hint:'拖動磁鐵去吸鐵釘！',desc:'磁鐵可以吸鐵製品，但唔吸塑膠。',task:'用磁鐵吸起 🔑鎖匙 和 📎迴紋針，唔好吸塑膠玩具！'},
+{id:2,name:'認識兩極',hint:'睇羅盤針點轉',desc:'磁鐵有兩極：紅色N極、藍色S極。',task:'摆動磁鐵，觀察 🧭 羅盤針指向邊個方向'},
+{id:3,name:'同極相斥',hint:'同極互相推開',desc:'N極同N極會互相推開，S極同S極都係。',task:'将兩舊 🔴🔴 都係紅色既磁鐵埋近，睇 🧭 點郁'},
+{id:4,name:'異極相吸',hint:'異極互相吸引',desc:'N極會被S極吸引，就好似好朋友咁。',task:'將 🔴🔵 紅（N）藍（S）兩極埋近，睇 🧭 點郁'},
+{id:5,name:'指南針',hint:'指向北方',desc:'地球本身就係一塊大磁鐵，所以羅盤針永遠指向北方。',task:'🧭 永遠指向北方 → ，用 🧲 磁鐵干擾佢！'}
 ];
 const obsHints=[
-'🔩 灰色 = 鐵，試下用磁鐵吸起佢！',
-'🧭 移動磁鐵，睇羅盤針點郁',
-'🧲🧲 兩邊都係 N 極，針點樣轉？',
-'🧲🧲 N 極 VS S 極，針點樣轉？',
-'🌍 干擾地球磁場，睇針點甩北方'
+'🏠 用磁鐵吸 🔑鎖匙 同 📎迴紋針，唔好吸錯塑膠！',
+'🧲 慢慢郁動磁鐵，睇 🧭 指針向住邊個方向？',
+'🔴🔴 兩舊都係紅色（=N極），試下埋近啲針點郁？',
+'🔴🔵 紅色（N）埋藍色（S），試下埋近啲！',
+'🧲 用磁鐵干擾 🧭，睇下指针偏向邊？'
 ];
 let currentLevel=0,speechEnabled=true,showFieldLines=true;
 let magnets=[],compassNeedles=[],ironObjects=[],plasticBeads=[];
@@ -320,13 +328,21 @@ function drawBackground(){
  // Draw earth magnetic field arrows for level 4
  if(currentLevel===4){
   ctx.save();
-  ctx.fillStyle='rgba(69,123,157,0.4)';
-  ctx.font='20px sans-serif';
+  // 🌍 globe icon on the right side
+  ctx.font='36px sans-serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  for(var ex=40;ex<W;ex+=60){
-   ctx.fillText('→',ex,35);
-   ctx.fillText('→',ex,55);
+  ctx.fillText('🌍',W-45,28);
+  ctx.fillStyle='rgba(69,123,157,0.5)';
+  ctx.font='14px sans-serif';
+  ctx.fillText('地球磁場',W-45,60);
+  // Field arrows
+  ctx.fillStyle='rgba(69,123,157,0.35)';
+  ctx.font='18px sans-serif';
+  ctx.textBaseline='middle';
+  for(var ex=30;ex<W-80;ex+=55){
+   ctx.fillText('→',ex,38);
+   ctx.fillText('→',ex,56);
   }
   ctx.restore();
  }
@@ -343,27 +359,55 @@ var NEEDLE_LEN=48;
 function drawCompass(x,y,angle,needleLen){
  ctx.save();
  ctx.translate(x,y);
- ctx.fillStyle='rgba(0,0,0,0.3)';
- ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;
- ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.stroke();
+ // Outer ring - larger compass body
+ ctx.fillStyle='rgba(255,248,230,0.9)';
+ ctx.beginPath();ctx.arc(0,0,32,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#c9a84c';ctx.lineWidth=3;
+ ctx.beginPath();ctx.arc(0,0,32,0,Math.PI*2);ctx.stroke();
+ // Inner ring
+ ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+ ctx.beginPath();ctx.arc(0,0,26,0,Math.PI*2);ctx.stroke();
+ // N/S/E/W labels (before rotation)
+ ctx.fillStyle='#333';
+ ctx.font='bold 10px sans-serif';
+ ctx.textAlign='center';
+ ctx.textBaseline='middle';
+ ctx.fillText('N',0,-27);
+ ctx.fillText('S',0,27);
+ ctx.fillText('E',27,0);
+ ctx.fillText('W',-27,0);
+ // Small degree marks
+ ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;
+ for(var d=0;d<12;d++){
+  var a=d*Math.PI/6;
+  var r1=26,r2=29;
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);
+  ctx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);
+  ctx.stroke();
+ }
  ctx.rotate(angle);
- // N pole (red) - larger arrow shape for visibility
- ctx.fillStyle='#e63946';ctx.strokeStyle='#e63946';
+ // N pole needle (red) - diamond shape with white tip dot
+ ctx.fillStyle='#e63946';ctx.strokeStyle='#c01830';ctx.lineWidth=1.5;
  ctx.beginPath();
  ctx.moveTo(needleLen/2,0);
- ctx.lineTo(needleLen/2-10,5);
- ctx.lineTo(needleLen/2-10,-5);
- ctx.closePath();
- ctx.fill();
- // S pole (darker blue)
- ctx.fillStyle='#1f5c8a';ctx.strokeStyle='#1f5c8a';
+ ctx.lineTo(0,5);
+ ctx.lineTo(-needleLen/2,0);
+ ctx.lineTo(0,-5);
+ ctx.closePath();ctx.fill();ctx.stroke();
+ // S pole needle (blue)
+ ctx.fillStyle='#1f5c8a';ctx.strokeStyle='#0f3d5c';ctx.lineWidth=1.5;
  ctx.beginPath();
  ctx.moveTo(-needleLen/2,0);
- ctx.lineTo(-needleLen/2+10,5);
- ctx.lineTo(-needleLen/2+10,-5);
- ctx.closePath();
- ctx.fill();
+ ctx.lineTo(0,5);
+ ctx.lineTo(needleLen/2,0);
+ ctx.lineTo(0,-5);
+ ctx.closePath();ctx.fill();ctx.stroke();
+ // Center pivot
+ ctx.fillStyle='#f5f5dc';
+ ctx.beginPath();ctx.arc(0,0,4,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#c9a84c';ctx.lineWidth=1.5;
+ ctx.beginPath();ctx.arc(0,0,4,0,Math.PI*2);ctx.stroke();
  ctx.restore();
 }
 
@@ -375,23 +419,32 @@ function drawMagnet(x,y,dir,isDragging){
   ctx.shadowColor='rgba(255,209,102,0.8)';
   ctx.shadowBlur=20;
  }
- const w=80,h=30,r=8;
- ctx.fillStyle='#aaa';
+ const w=80,h=28,r=6;
+ // Rubber edge (grey border) for cartoon look
+ ctx.fillStyle='#888';
+ ctx.beginPath();
+ roundRect(-w/2-2,-h/2-2,w+4,h+4,r+2);ctx.fill();
+ // White base
+ ctx.fillStyle='#f0f0f0';
  ctx.beginPath();
  roundRect(-w/2,-h/2,w,h,r);ctx.fill();
- ctx.fillStyle=dir?'#e63946':'#1f5c8a';
+ // N pole (red) - left half
+ ctx.fillStyle='#e63946';
  ctx.beginPath();roundRect(-w/2,-h/2,w/2,h,r,['tl','bl']);ctx.fill();
- ctx.fillStyle=dir?'#b0202f':'#0f2d4a';
+ // S pole (blue) - right half
+ ctx.fillStyle='#2a7fc9';
  ctx.beginPath();roundRect(0,-h/2,w/2,h,r,['tr','br']);ctx.fill();
- ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+ // N/S text
+ ctx.fillStyle='#fff';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.fillText(dir?'N':'S',dir?-w/4:w/4,0);
- // N/S pole label near magnet
- ctx.font='12px sans-serif';
- ctx.fillStyle='rgba(255,255,255,0.7)';
- // left half = N if dir=true, S if dir=false
- // right half = S if dir=true, N if dir=false
- ctx.fillText(dir?'🅽':'🅴',-w/4,-22);  // left label
- ctx.fillText(dir?'🅴':'🅽',w/4,22);    // right label
+ // Highlight
+ ctx.fillStyle='rgba(255,255,255,0.3)';
+ ctx.beginPath();roundRect(-w/2+3,-h/2+2,w-6,h/3,3);ctx.fill();
+ // N/S pole label emoji
+ ctx.font='11px sans-serif';
+ ctx.fillStyle='rgba(255,255,255,0.8)';
+ ctx.fillText(dir?'🅽':'🅴',-w/4,-18);
+ ctx.fillText(dir?'🅴':'🅽',w/4,18);
  ctx.restore();
 }
 
@@ -441,15 +494,35 @@ function drawIronShape(obj){
  ctx.save();
  ctx.translate(obj.x,obj.y);
  ctx.rotate(obj.r||0);
- if(obj.type==='nail'){
+ if(obj.type==='key'){
+  // Key shape: circle head + shaft + teeth
+  ctx.fillStyle='#c0c0c0';ctx.strokeStyle='#888';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(-12,0,8,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#888';
+  ctx.beginPath();ctx.arc(-12,0,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#c0c0c0';
+  ctx.beginPath();ctx.roundRect(-4,-3,28,6,2);ctx.fill();ctx.stroke();
+  ctx.strokeStyle='#888';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(18,-3);ctx.lineTo(18,3);ctx.lineTo(22,3);ctx.lineTo(22,-3);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(12,-3);ctx.lineTo(12,3);ctx.lineTo(15,3);ctx.lineTo(15,-3);ctx.stroke();
+ }else if(obj.type==='paperclip'){
+  // Paperclip: double loop wire
+  ctx.strokeStyle='#a8dadc';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(0,-12);
+  ctx.lineTo(0,12);
+  ctx.arc(6,12,6,Math.PI,0,true);
+  ctx.lineTo(12,-5);
+  ctx.arc(6,-5,6,0,Math.PI,false);
+  ctx.lineTo(6,-12);
+  ctx.stroke();
+ }else{
+  // nail fallback
   ctx.fillStyle='#a8dadc';ctx.strokeStyle='#7bb8ba';ctx.lineWidth=2;
   ctx.beginPath();ctx.roundRect(-27,-6,54,12,4);ctx.fill();ctx.stroke();
   ctx.fillStyle='#888';
   ctx.beginPath();ctx.arc(-27,0,5,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-27,0,2.5,0,Math.PI*2);ctx.fill();
- }else{
-  ctx.strokeStyle='#a8dadc';ctx.lineWidth=3;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(-10,-8);ctx.lineTo(-10,8);ctx.lineTo(10,8);ctx.lineTo(10,-8);ctx.stroke();
  }
  ctx.restore();
 }
@@ -657,7 +730,7 @@ function showIntro(lv){
  var icons={'磁鐵吸邊個？':'🧲→🔩','認識兩極':'🧲↔🧭','同極相斥':'🧲↔🧲','異極相吸':'🧲→🧲','指南針':'🌍→🧭'};
  title.textContent='關卡 '+l.id+'. '+l.name;
  var hintIcon=obsHints[lv]||'';
- desc.textContent=(icons[l.name]||'🧲')+'  '+l.task+'\n\n'+hintIcon;
+ desc.innerHTML=(icons[l.name]||'🧲')+'  '+l.task+'<br><br>'+hintIcon;
  overlay.classList.add('show');
  setTimeout(function(){
   overlay.classList.remove('show');
@@ -681,11 +754,14 @@ function initLevel(lv){
   magnets.push({x:W*0.7,y:H*0.5,dir:true});
   var pos=[{x:W*0.2,y:H*0.3},{x:W*0.3,y:H*0.7},{x:W*0.5,y:H*0.5},{x:W*0.7,y:H*0.3},{x:W*0.5,y:H*0.7}];
   for(var i=0;i<pos.length;i++)compassNeedles.push({x:pos[i].x,y:pos[i].y,angle:0,vx:0,vy:0});
-  var nailPos=[{x:W*0.2,y:H*0.4},{x:W*0.4,y:H*0.6},{x:W*0.6,y:H*0.4}];
-  for(var i=0;i<nailPos.length;i++)ironObjects.push({x:nailPos[i].x,y:nailPos[i].y,vx:0,vy:0,type:'nail',r:0,collected:false,collectAnim:0});
-  var beadColors=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#cc5de8'];
-  var beadPos=[{x:W*0.35,y:H*0.3},{x:W*0.55,y:H*0.65}];
-  for(var i=0;i<beadPos.length;i++)plasticBeads.push({x:beadPos[i].x,y:beadPos[i].y,color:beadColors[i%beadColors.length]});
+  // Daily life iron objects: key + paperclip
+  var lifePos=[{x:W*0.15,y:H*0.5},{x:W*0.35,y:H*0.35},{x:W*0.55,y:H*0.55}];
+  var lifeTypes=['key','paperclip','key'];
+  for(var i=0;i<lifePos.length;i++)ironObjects.push({x:lifePos[i].x,y:lifePos[i].y,vx:0,vy:0,type:lifeTypes[i],r:0,collected:false,collectAnim:0});
+  // Plastic toys (cannot be attracted)
+  var toyColors=['#ff6b6b','#ffd93d','#6bcb77'];
+  var toyPos=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.65},{x:W*0.75,y:H*0.4}];
+  for(var i=0;i<toyPos.length;i++)plasticBeads.push({x:toyPos[i].x,y:toyPos[i].y,color:toyColors[i%toyColors.length]});
  }else if(lv===1){
   var positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
   for(var i=0;i<positions.length;i++)compassNeedles.push({x:positions[i].x,y:positions[i].y,angle:0,vx:0,vy:0});
