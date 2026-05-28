@@ -603,6 +603,7 @@ function startDrag(e){
  e.preventDefault();
  const pt=pointerPos(e);
  const obj=hitTestAll(pt.x,pt.y);
+ console.log('startDrag',{pt,obj,magnetCount:magnets.length,ironCount:ironObjects.length,compassCount:compassNeedles.length});
  if(obj){
   drag=obj;
   dragOffX=pt.x-obj.x;
