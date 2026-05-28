@@ -573,16 +573,33 @@ function hitTestIron(x,y){
  return null;
 }
 
+function hitTestCompass(x,y){
+ for(let i=0;i<compassNeedles.length;i++){
+  const n=compassNeedles[i];
+  if(dist(x,y,n.x,n.y)<22)return compassNeedles[i];
+ }
+ return null;
+}
+
+function hitTestBead(x,y){
+ for(let i=0;i<plasticBeads.length;i++){
+  const b=plasticBeads[i];
+  if(dist(x,y,b.x,b.y)<14)return plasticBeads[i];
+ }
+ return null;
+}
+
+function hitTestAny(x,y){
+ return hitTestMagnet(x,y)||hitTestIron(x,y)||hitTestCompass(x,y)||hitTestBead(x,y);
+}
+
 function setCursor(x,y){
- let cur='default';
- if(hitTestMagnet(x,y)||hitTestIron(x,y))cur='grab';
- if(drag!==null)cur='grabbing';
- canvas.style.cursor=cur;
+ canvas.style.cursor=hitTestAny(x,y)?'grab':(drag?'grabbing':'default');
 }
 
 canvas.addEventListener('mousedown',e=>{
  const{tX:tX,tY:tY}=pointerPos(e);
- drag=hitTestMagnet(tX,tY);
+ drag=hitTestMagnet(tX,tY)||hitTestIron(tX,tY)||hitTestCompass(tX,tY)||hitTestBead(tX,tY);
  if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;canvas.style.cursor='grabbing';studentInteracted=true}
 });
 canvas.addEventListener('mousemove',e=>{
@@ -590,13 +607,15 @@ canvas.addEventListener('mousemove',e=>{
  setCursor(tX,tY);
  if(drag===null)return;
  drag.x=tX-dragOffX;drag.y=tY-dragOffY;
+ drag.x=Math.max(20,Math.min(W-20,drag.x));
+ drag.y=Math.max(20,Math.min(H-20,drag.y));
  fieldLineDirty=true;
 });
 canvas.addEventListener('mouseup',()=>{drag=null;canvas.style.cursor='default'});
 canvas.addEventListener('touchstart',e=>{
  e.preventDefault();
  const{tX:tX,tY:tY}=pointerPos(e);
- drag=hitTestMagnet(tX,tY);
+ drag=hitTestMagnet(tX,tY)||hitTestIron(tX,tY)||hitTestCompass(tX,tY)||hitTestBead(tX,tY);
  if(drag){dragOffX=tX-drag.x;dragOffY=tY-drag.y;studentInteracted=true}
 },{passive:false});
 canvas.addEventListener('touchmove',e=>{
@@ -604,6 +623,8 @@ canvas.addEventListener('touchmove',e=>{
  if(drag===null)return;
  const{tX:tX,tY:tY}=pointerPos(e);
  drag.x=tX-dragOffX;drag.y=tY-dragOffY;
+ drag.x=Math.max(20,Math.min(W-20,drag.x));
+ drag.y=Math.max(20,Math.min(H-20,drag.y));
  fieldLineDirty=true;
 },{passive:false});
 canvas.addEventListener('touchend',()=>{drag=null});
