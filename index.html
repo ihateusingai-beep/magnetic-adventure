@@ -369,22 +369,22 @@ function updateIron(){
   let fx=0,fy=0,collected=false;
   for(const m of magnets){
    const d=dist(obj.x,obj.y,m.x,m.y);
-   if(d<35){
+   if(d<40){
     collected=true;
     obj.collected=true;
     obj.vx=0;obj.vy=0;
     break;
    }
-   if(d<120){
-    const force=(120-d)/120*4;
+   if(d<60){
+    const force=(60-d)/60*2;
     const angle=Math.atan2(m.y-obj.y,m.x-obj.x);
     fx+=Math.cos(angle)*force;
     fy+=Math.sin(angle)*force;
    }
   }
   if(!collected){
-   obj.vx=lerp(obj.vx||0,fx,0.08);
-   obj.vy=lerp(obj.vy||0,fy,0.08);
+   obj.vx=lerp(obj.vx||0,fx,0.03);
+   obj.vy=lerp(obj.vy||0,fy,0.03);
    obj.x+=obj.vx||0;
    obj.y+=obj.vy||0;
    obj.x=Math.max(20,Math.min(W-20,obj.x));
