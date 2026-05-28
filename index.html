@@ -45,8 +45,14 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #complete-banner h2{font-size:calc(28px + var(--fs,0px));color:var(--accent);margin-bottom:10px}
 #complete-banner p{font-size:calc(18px + var(--fs,0px));margin-bottom:20px}
 #footer{position:absolute;bottom:4px;right:8px;font-size:11px;opacity:0.4;pointer-events:none}
+#progress-bar{position:absolute;top:16px;right:16px;background:var(--panel);backdrop-filter:blur(8px);border-radius:12px;padding:8px 14px;border:1px solid rgba(255,255,255,0.1);font-size:calc(13px + var(--fs,0px));color:var(--accent);min-width:100px;text-align:center}
+#intro-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#intro-overlay.show{display:flex}
+#intro-overlay h2{font-size:calc(32px + var(--fs,0px));color:var(--accent)}
+#intro-overlay p{font-size:calc(20px + var(--fs,0px));opacity:0.9;text-align:center;max-width:400px;line-height:1.4}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 </style>
-<meta name="description" content="磁力探險實驗 — 互動學習磁鐵、磁場、兩極相吸相斥 | 匡智張玉瓊晨輝學校">
+<meta name="description" content="磁力探險實驗 — 互動學習磁鐵、磁場、兩極相吸相斥 | 匡智張玉瓊晨暉學校">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>">
 </head>
 <body>
@@ -68,19 +74,24 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
   <div id="canvas-wrap">
    <canvas id="canvas"></canvas>
    <div id="level-info"><h2>關卡 1</h2><p>拖動磁鐵，吸起鐵釘！</p></div>
+   <div id="progress-bar">鐵釘 0/0</div>
    <div id="toolbar">
     <button class="btn" id="btnPrev" aria-label="上一關">◀ 上一關</button>
     <button class="btn" id="btnNext" aria-label="下一關">下一關 ▶</button>
    </div>
-   <div id="footer">Ken Cheng © 2026 | 匡智張玉瓊晨輝學校</div>
+   <div id="footer">Ken Cheng © 2026 | 匡智張玉瓊晨暉學校</div>
   </div>
  </div>
- <div id="hint-bar"><span>拖動磁鐵 · 觀察羅盤針方向</span></div>
- <div id="complete-banner">
-  <h2>🎉 完成！</h2>
-  <p id="bannerText">太棒了！</p>
-  <button class="btn" id="btnBannerNext" aria-label="下一關">下一關 ▶</button>
- </div>
+</div>
+<div id="hint-bar"><span>拖動磁鐵 · 觀察羅盤針方向</span></div>
+<div id="complete-banner">
+ <h2>🎉 完成！</h2>
+ <p id="bannerText">太棒了！</p>
+ <button class="btn" id="btnBannerNext" aria-label="下一關">下一關 ▶</button>
+</div>
+<div id="intro-overlay">
+ <h2 id="intro-title">關卡 1</h2>
+ <p id="intro-desc">拖動 🧲 收集所有 🔩</p>
 </div>
 
 <script>
@@ -100,6 +111,49 @@ let studentInteracted=false;
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
 let W,H,dpr;
+var gameTime=0;
+
+// Web Audio for proximity beep
+var audioCtx=null;
+function getAudioCtx(){
+ if(!audioCtx){
+  try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+ }
+ return audioCtx;
+}
+function playBeep(freq,dur){
+ var ac=getAudioCtx();
+ if(!ac)return;
+ try{
+  var osc=ac.createOscillator();
+  var gain=ac.createGain();
+  osc.connect(gain);
+  gain.connect(ac.destination);
+  osc.type='sine';
+  osc.frequency.value=freq;
+  gain.gain.setValueAtTime(0.15,ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur);
+  osc.start(ac.currentTime);
+  osc.stop(ac.currentTime+dur);
+ }catch(e){}
+}
+function playCollectSound(){
+ var ac=getAudioCtx();
+ if(!ac)return;
+ try{
+  var osc=ac.createOscillator();
+  var gain=ac.createGain();
+  osc.connect(gain);
+  gain.connect(ac.destination);
+  osc.type='sine';
+  osc.frequency.setValueAtTime(880,ac.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1760,ac.currentTime+0.1);
+  gain.gain.setValueAtTime(0.2,ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.2);
+  osc.start(ac.currentTime);
+  osc.stop(ac.currentTime+0.2);
+ }catch(e){}
+}
 
 function resize(){
  dpr=window.devicePixelRatio||1;
@@ -123,7 +177,6 @@ function getMagField(x,y){
   const d=Math.max(10,Math.hypot(dx,dy));
   const k=5000;
   const len=Math.pow(d,3);
-  const mx=m.dir?'N':'S';
   const sgn=m.dir?1:-1;
   const rdx=dx/d,rdy=dy/d;
   const mdotr=rdx*sgn;
@@ -139,13 +192,13 @@ function getMagField(x,y){
 
 function computeFieldLines(){
  const lines=[];
+ var lineCount=20;
+ if(currentLevel===1)lineCount=8;
  for(const m of magnets){
   const pole=m.dir;
   const px=m.x,py=m.y;
-  const startAngle=Math.atan2(py-H/2,px-W/2);
-  const count=20;
-  for(let i=0;i<count;i++){
-   const baseAngle=-Math.PI+i*(2*Math.PI/count)+0.05;
+  for(let i=0;i<lineCount;i++){
+   const baseAngle=-Math.PI+i*(2*Math.PI/lineCount)+0.05;
    const angle=baseAngle+(Math.random()-0.5)*0.08;
    const sp=8;
    const sx=px+Math.cos(angle)*sp;
@@ -174,7 +227,7 @@ function traceLine(sx,sy,pole){
   px=x;py=y;
   x+=vx*step;
   y+=vy*step;
-  if(x<0||x>W||y<0||y>H)break;
+  if(x<0||x>W||y>H)break;
   let hitPole=null;
   for(const m of magnets){
    const d=dist(x,y,m.x,m.y);
@@ -255,33 +308,58 @@ function drawBackground(){
  for(let x=0;x<=W;x+=30){
   ctx.beginPath();ctx.moveTo(x,H*0.72);ctx.lineTo(x,H);ctx.stroke();
  }
+ // Draw N direction indicator at top-right
+ ctx.save();
+ ctx.fillStyle='rgba(255,255,255,0.4)';
+ ctx.font='bold 16px sans-serif';
+ ctx.textAlign='center';
+ ctx.fillText('北方 →',W-50,20);
+ ctx.restore();
 }
 
+var NEEDLE_LEN=48;
 function drawCompass(x,y,angle,needleLen){
  ctx.save();
  ctx.translate(x,y);
  ctx.fillStyle='rgba(0,0,0,0.3)';
- ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=2;
- ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.stroke();
  ctx.rotate(angle);
+ // N pole (red) - larger arrow shape for visibility
  ctx.fillStyle='#e63946';ctx.strokeStyle='#e63946';
- ctx.beginPath();ctx.moveTo(needleLen/2,0);ctx.lineTo(0,3);ctx.lineTo(-needleLen/2,0);ctx.lineTo(0,-3);ctx.closePath();ctx.fill();
- ctx.fillStyle='#457b9d';ctx.strokeStyle='#457b9d';
- ctx.beginPath();ctx.moveTo(-needleLen/2,0);ctx.lineTo(0,3);ctx.lineTo(needleLen/2,0);ctx.lineTo(0,-3);ctx.closePath();ctx.fill();
+ ctx.beginPath();
+ ctx.moveTo(needleLen/2,0);
+ ctx.lineTo(needleLen/2-10,5);
+ ctx.lineTo(needleLen/2-10,-5);
+ ctx.closePath();
+ ctx.fill();
+ // S pole (darker blue)
+ ctx.fillStyle='#1f5c8a';ctx.strokeStyle='#1f5c8a';
+ ctx.beginPath();
+ ctx.moveTo(-needleLen/2,0);
+ ctx.lineTo(-needleLen/2+10,5);
+ ctx.lineTo(-needleLen/2+10,-5);
+ ctx.closePath();
+ ctx.fill();
  ctx.restore();
 }
 
-function drawMagnet(x,y,dir){
+function drawMagnet(x,y,dir,isDragging){
  ctx.save();
  ctx.translate(x,y);
+ // Drag glow
+ if(isDragging){
+  ctx.shadowColor='rgba(255,209,102,0.8)';
+  ctx.shadowBlur=20;
+ }
  const w=80,h=30,r=8;
  ctx.fillStyle='#aaa';
  ctx.beginPath();
  roundRect(-w/2,-h/2,w,h,r);ctx.fill();
- ctx.fillStyle=dir?'#e63946':'#457b9d';
+ ctx.fillStyle=dir?'#e63946':'#1f5c8a';
  ctx.beginPath();roundRect(-w/2,-h/2,w/2,h,r,['tl','bl']);ctx.fill();
- ctx.fillStyle=dir?'#b0202f':'#2d5a7b';
+ ctx.fillStyle=dir?'#b0202f':'#0f2d4a';
  ctx.beginPath();roundRect(0,-h/2,w/2,h,r,['tr','br']);ctx.fill();
  ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.fillText(dir?'N':'S',dir?-w/4:w/4,0);
@@ -306,16 +384,40 @@ function roundRect(x,y,w,h,r,corners){
 }
 
 function drawIron(obj){
- if(obj.collected)return;
+ if(obj.collected){
+  if(obj.collectAnim>0){
+   ctx.save();
+   ctx.globalAlpha=obj.collectAnim;
+   ctx.translate(obj.x,obj.y);
+   var s=1-obj.collectAnim;
+   ctx.scale(s,s);
+   ctx.translate(-obj.x,-obj.y);
+   drawIronShape(obj);
+   ctx.restore();
+   obj.collectAnim-=0.05;
+   if(obj.collectAnim<=0)obj.collected=false;
+  }
+  return;
+ }
+ // Pulse glow for uncollected iron
+ ctx.save();
+ var pulse=0.5+0.5*Math.sin(gameTime*3);
+ ctx.shadowColor='rgba(255,255,255,'+pulse*0.5+')';
+ ctx.shadowBlur=12*pulse;
+ drawIronShape(obj);
+ ctx.restore();
+}
+
+function drawIronShape(obj){
  ctx.save();
  ctx.translate(obj.x,obj.y);
  ctx.rotate(obj.r||0);
  if(obj.type==='nail'){
   ctx.fillStyle='#a8dadc';ctx.strokeStyle='#7bb8ba';ctx.lineWidth=2;
-  ctx.beginPath();ctx.roundRect(-18,-4,36,8,3);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.roundRect(-27,-6,54,12,4);ctx.fill();ctx.stroke();
   ctx.fillStyle='#888';
-  ctx.beginPath();ctx.arc(-18,0,4,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-18,0,2,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(-27,0,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#aaa';ctx.beginPath();ctx.arc(-27,0,2.5,0,Math.PI*2);ctx.fill();
  }else{
   ctx.strokeStyle='#a8dadc';ctx.lineWidth=3;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(-10,-8);ctx.lineTo(-10,8);ctx.lineTo(10,8);ctx.lineTo(10,-8);ctx.stroke();
@@ -364,7 +466,9 @@ function updateNeedles(){
 }
 
 function updateIron(){
+ var nearestDist=999;
  for(const obj of ironObjects){
+  if(obj.collected&&obj.collectAnim<=0)continue;
   if(obj.collected)continue;
   let fx=0,fy=0,collected=false;
   for(const m of magnets){
@@ -372,9 +476,12 @@ function updateIron(){
    if(d<40){
     collected=true;
     obj.collected=true;
+    obj.collectAnim=1;
     obj.vx=0;obj.vy=0;
+    playCollectSound();
     break;
    }
+   if(d<nearestDist)nearestDist=d;
    if(d<60){
     const force=(60-d)/60*2;
     const angle=Math.atan2(m.y-obj.y,m.x-obj.x);
@@ -392,43 +499,75 @@ function updateIron(){
    obj.r=(obj.r||0)+(obj.vx||0)*0.05;
   }
  }
+ // Proximity beep
+ if(nearestDist<60&&drag&&drag&&drag!==null){
+  var freq=220+60*(1-nearestDist/60)*4;
+  if(nearestDist<40)freq*=1.5;
+ }
+}
+
+function updateProgressCounter(){
+ var el=document.getElementById('progress-bar');
+ if(currentLevel===0){
+  var total=3;
+  var remaining=ironObjects.filter(function(o){return !o.collected||o.collectAnim>0;}).length;
+  var collected=total-remaining;
+  el.textContent='鐵釘 '+collected+'/'+total;
+  el.style.display='block';
+ }else{
+  var deflectPct=0;
+  if(compassNeedles.length>0){
+   var sum=0;
+   for(var i=0;i<compassNeedles.length;i++){
+    var n=compassNeedles[i];
+    var ta=getTargetAngle(n);
+    var diff=ta-(n.angle||0);
+    while(diff>Math.PI)diff-=Math.PI*2;
+    while(diff<-Math.PI)diff+=Math.PI*2;
+    sum+=Math.min(Math.abs(diff)/Math.PI,1);
+   }
+   deflectPct=Math.round((sum/compassNeedles.length)*100);
+  }
+  el.textContent='偏轉 '+deflectPct+'%';
+  el.style.display='block';
+ }
 }
 
 function checkLevelComplete(){
  if(currentLevel===0){
-  const remaining=ironObjects.filter(o=>!o.collected);
+  var remaining=ironObjects.filter(function(o){return !o.collected||o.collectAnim>0;});
   if(remaining.length===0){
    showComplete('你收集晒所有鐵器了！準備進入下一關！');
   }
  }else if(currentLevel===1){
-  // 認識兩極：需要拖動磁鐵改變羅盤針方向才算完成
   if(studentInteracted){
-   let count=0;
-   for(const n of compassNeedles){
-    const ta=getTargetAngle(n);
-    let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+   var count=0;
+   for(var i=0;i<compassNeedles.length;i++){
+    var n=compassNeedles[i];
+    var ta=getTargetAngle(n);
+    var diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
     if(Math.abs(diff)>Math.PI/4)count++;
    }
    if(count>=Math.floor(compassNeedles.length*0.6))showComplete('你發現咗！磁鐵兩端既力量最強！');
   }
  }else if(currentLevel===2||currentLevel===3){
-  // 同極相斥/異極相吸：需要拖動磁鐵才能完成
   if(studentInteracted){
-   let count=0;
-   for(const n of compassNeedles){
-    const ta=getTargetAngle(n);
-    let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+   var count=0;
+   for(var i=0;i<compassNeedles.length;i++){
+    var n=compassNeedles[i];
+    var ta=getTargetAngle(n);
+    var diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
     if(Math.abs(diff-Math.PI)<Math.PI/4)count++;
    }
    if(count>=Math.floor(compassNeedles.length*0.4))showComplete(currentLevel===2?'你發現咗！同極相斥！':'你發現咗！異極相吸！');
   }
  }else if(currentLevel===4){
-  // 指南針：需要拖動磁鐵干擾地球磁場才能完成
   if(studentInteracted){
-   let disturbed=0;
-   for(const n of compassNeedles){
-    const ta=getTargetAngle(n);
-    let diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+   var disturbed=0;
+   for(var i=0;i<compassNeedles.length;i++){
+    var n=compassNeedles[i];
+    var ta=getTargetAngle(n);
+    var diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
     if(Math.abs(diff)>Math.PI/6)disturbed++;
    }
    if(disturbed>=Math.floor(compassNeedles.length*0.4))showComplete('你發現咗！地球係大磁鐵，永遠指向北方！');
@@ -440,16 +579,16 @@ function autoNextLevel(text){
  if(levelCompleteTimer)clearTimeout(levelCompleteTimer);
  playSpeech(text);
  if(currentLevel<levels.length-1){
-  setTimeout(()=>{currentLevel++;initLevel(currentLevel)},1500);
+  setTimeout(function(){currentLevel++;initLevel(currentLevel);},1500);
  }
 }
 
 function showComplete(text){
- const banner=document.getElementById('complete-banner');
+ var banner=document.getElementById('complete-banner');
  document.getElementById('bannerText').textContent=text;
  banner.style.display='block';
  playSpeech(text);
- const btns=document.querySelectorAll('.level-btn');
+ var btns=document.querySelectorAll('.level-btn');
  if(btns[currentLevel])btns[currentLevel].classList.add('completed');
 }
 
@@ -468,64 +607,78 @@ function playSpeech(text){
  if(!speechEnabled)return;
  if('speechSynthesis' in window){
   window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
+  var u=new SpeechSynthesisUtterance(text);
   u.lang='zh-HK';
   u.rate=0.9;
   window.speechSynthesis.speak(u);
  }
 }
 
+function showIntro(lv){
+ var overlay=document.getElementById('intro-overlay');
+ var title=document.getElementById('intro-title');
+ var desc=document.getElementById('intro-desc');
+ var l=levels[lv];
+ var icons={'磁鐵吸邊個？':'🧲→🔩','認識兩極':'🧲↔🧭','同極相斥':'🧲↔🧲','異極相吸':'🧲→🧲','指南針':'🌍→🧭'};
+ title.textContent='關卡 '+l.id+'. '+l.name;
+ desc.textContent=(icons[l.name]||'🧲')+'  '+l.task;
+ overlay.classList.add('show');
+ setTimeout(function(){
+  overlay.classList.remove('show');
+ },2500);
+}
+
 function initLevel(lv){
  fieldLineDirty=true;
  studentInteracted=false;
  if(levelCompleteTimer)clearTimeout(levelCompleteTimer);
- const info=document.getElementById('level-info');
- info.textContent='';
- const h2=document.createElement('h2');h2.textContent='關卡 '+levels[lv].id;
- const p1=document.createElement('p');p1.textContent=levels[lv].desc;
- const p2=document.createElement('p');p2.style.cssText='margin-top:6px;color:var(--accent)';p2.textContent='任務：'+levels[lv].task;
+ var info=document.getElementById('level-info');
+ info.innerHTML='';
+ var h2=document.createElement('h2');h2.textContent='關卡 '+levels[lv].id;
+ var p1=document.createElement('p');p1.textContent=levels[lv].desc;
+ var p2=document.createElement('p');p2.style.cssText='margin-top:6px;color:var(--accent)';p2.textContent='任務：'+levels[lv].task;
  info.appendChild(h2);info.appendChild(p1);info.appendChild(p2);
  document.querySelector('#hint-bar span').textContent=levels[lv].hint;
  magnets=[];compassNeedles=[];ironObjects=[];plasticBeads=[];
  if(lv===0){
   magnets.push({x:W*0.7,y:H*0.5,dir:true});
-  const pos=[{x:W*0.2,y:H*0.3},{x:W*0.3,y:H*0.7},{x:W*0.5,y:H*0.5},{x:W*0.7,y:H*0.3},{x:W*0.5,y:H*0.7}];
-  for(const p of pos)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
-  const nailPos=[{x:W*0.2,y:H*0.4},{x:W*0.4,y:H*0.6},{x:W*0.6,y:H*0.4}];
-  for(const p of nailPos)ironObjects.push({x:p.x,y:p.y,vx:0,vy:0,type:'nail',r:0});
-  const beadColors=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#cc5de8'];
-  const beadPos=[{x:W*0.35,y:H*0.3},{x:W*0.55,y:H*0.65}];
-  for(let i=0;i<beadPos.length;i++){
-   plasticBeads.push({x:beadPos[i].x,y:beadPos[i].y,color:beadColors[i%beadColors.length]});
-  }
+  var pos=[{x:W*0.2,y:H*0.3},{x:W*0.3,y:H*0.7},{x:W*0.5,y:H*0.5},{x:W*0.7,y:H*0.3},{x:W*0.5,y:H*0.7}];
+  for(var i=0;i<pos.length;i++)compassNeedles.push({x:pos[i].x,y:pos[i].y,angle:0,vx:0,vy:0});
+  var nailPos=[{x:W*0.2,y:H*0.4},{x:W*0.4,y:H*0.6},{x:W*0.6,y:H*0.4}];
+  for(var i=0;i<nailPos.length;i++)ironObjects.push({x:nailPos[i].x,y:nailPos[i].y,vx:0,vy:0,type:'nail',r:0,collected:false,collectAnim:0});
+  var beadColors=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#cc5de8'];
+  var beadPos=[{x:W*0.35,y:H*0.3},{x:W*0.55,y:H*0.65}];
+  for(var i=0;i<beadPos.length;i++)plasticBeads.push({x:beadPos[i].x,y:beadPos[i].y,color:beadColors[i%beadColors.length]});
  }else if(lv===1){
-  const positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
-  for(const p of positions)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
+  var positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
+  for(var i=0;i<positions.length;i++)compassNeedles.push({x:positions[i].x,y:positions[i].y,angle:0,vx:0,vy:0});
  }else if(lv===2){
   magnets.push({x:W*0.3,y:H*0.5,dir:true});
   magnets.push({x:W*0.7,y:H*0.5,dir:true});
-  const positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
-  for(const p of positions)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
+  var positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
+  for(var i=0;i<positions.length;i++)compassNeedles.push({x:positions[i].x,y:positions[i].y,angle:0,vx:0,vy:0});
  }else if(lv===3){
   magnets.push({x:W*0.3,y:H*0.5,dir:true});
   magnets.push({x:W*0.7,y:H*0.5,dir:false});
-  const positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
-  for(const p of positions)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
+  var positions=[{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.5,y:H*0.5},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7}];
+  for(var i=0;i<positions.length;i++)compassNeedles.push({x:positions[i].x,y:positions[i].y,angle:0,vx:0,vy:0});
  }else if(lv===4){
-  const positions=[
+  var positions=[
    {x:W*0.2,y:H*0.3},{x:W*0.4,y:H*0.3},{x:W*0.6,y:H*0.3},{x:W*0.8,y:H*0.3},
    {x:W*0.2,y:H*0.5},{x:W*0.4,y:H*0.5},{x:W*0.6,y:H*0.5},{x:W*0.8,y:H*0.5},
    {x:W*0.2,y:H*0.7},{x:W*0.4,y:H*0.7},{x:W*0.6,y:H*0.7},{x:W*0.8,y:H*0.7}
   ];
-  for(const p of positions)compassNeedles.push({x:p.x,y:p.y,angle:0,vx:0,vy:0});
-  setTimeout(()=>playSpeech('地球磁場已經設定好，羅盤針永遠指向北方'),500);
+  for(var i=0;i<positions.length;i++)compassNeedles.push({x:positions[i].x,y:positions[i].y,angle:0,vx:0,vy:0});
+  setTimeout(function(){playSpeech('地球磁場已經設定好，羅盤針永遠指向北方');},500);
  }
- const btns=document.querySelectorAll('.level-btn');
- btns.forEach((b,i)=>b.classList.toggle('selected',i===lv));
- setTimeout(()=>playSpeech(levels[lv].task),800);
+ var btns=document.querySelectorAll('.level-btn');
+ for(var i=0;i<btns.length;i++)btns[i].classList.toggle('selected',i===lv);
+ setTimeout(function(){playSpeech(levels[lv].task);},800);
+ setTimeout(function(){showIntro(lv);},100);
 }
 
 function draw(){
+ gameTime+=0.016;
  ctx.clearRect(0,0,W,H);
  drawBackground();
  if(showFieldLines){
@@ -535,19 +688,21 @@ function draw(){
   }
   drawFieldLines(fieldLineCache);
  }
- for(const obj of ironObjects)drawIron(obj);
- for(const obj of plasticBeads)drawBead(obj);
- for(const n of compassNeedles)drawCompass(n.x,n.y,n.angle||0,22);
- for(const m of magnets)drawMagnet(m.x,m.y,m.dir);
+ for(var i=0;i<ironObjects.length;i++)drawIron(ironObjects[i]);
+ for(var i=0;i<plasticBeads.length;i++)drawBead(plasticBeads[i]);
+ for(var i=0;i<compassNeedles.length;i++)drawCompass(compassNeedles[i].x,compassNeedles[i].y,compassNeedles[i].angle||0,NEEDLE_LEN);
+ for(var i=0;i<magnets.length;i++)drawMagnet(magnets[i].x,magnets[i].y,magnets[i].dir,drag===magnets[i]);
  drawUI();
  updateNeedles();
  updateIron();
+ updateProgressCounter();
  requestAnimationFrame(draw);
  checkLevelComplete();
 }
 
-let drag=null;
-let dragOffX=0,dragOffY=0;
+var drag=null;
+var dragOffX=0,dragOffY=0;
+var lastBeepTime=0;
 
 function pointerPos(e){
  var r=canvas.getBoundingClientRect();
@@ -558,24 +713,28 @@ function pointerPos(e){
 }
 
 function hitTest(x,y){
+ // Magnets - 48px touch padding (was 42×18, now 66×30)
  for(var i=0;i<magnets.length;i++){
   var m=magnets[i];
-  if(Math.abs(x-m.x)<42&&Math.abs(y-m.y)<18)return m;
+  if(Math.abs(x-m.x)<66&&Math.abs(y-m.y)<30)return m;
  }
+ // Iron objects - 48px touch padding (was 22×10, now 36×16)
  for(var j=0;j<ironObjects.length;j++){
   var o=ironObjects[j];
   if(o.collected)continue;
-  if(Math.abs(x-o.x)<22&&Math.abs(y-o.y)<10)return o;
+  if(Math.abs(x-o.x)<36&&Math.abs(y-o.y)<16)return o;
  }
+ // Compass needles - 48px touch padding (was r<24, now r<36)
  for(var k=0;k<compassNeedles.length;k++){
   var n=compassNeedles[k];
   var dx=x-n.x,dy=y-n.y;
-  if(Math.sqrt(dx*dx+dy*dy)<24)return n;
+  if(Math.sqrt(dx*dx+dy*dy)<36)return n;
  }
+ // Plastic beads - 48px touch padding (was r<15, now r<24)
  for(var p=0;p<plasticBeads.length;p++){
   var b=plasticBeads[p];
   var bx=x-b.x,by=y-b.y;
-  if(Math.sqrt(bx*bx+by*by)<15)return b;
+  if(Math.sqrt(bx*bx+by*by)<24)return b;
  }
  return null;
 }
@@ -588,9 +747,17 @@ canvas.addEventListener('mousedown',function(e){
   drag=obj;
   dragOffX=pos.x-obj.x;
   dragOffY=pos.y-obj.y;
-  canvas.style.cursor='grabbing';
   studentInteracted=true;
   fieldLineDirty=true;
+  // Wrong object shake hint
+  if(obj&&!obj.dir&&obj.type==='nail'){
+   // dragging iron nail - gentle shake
+  }else if(obj&&obj.type==='nail'&&obj!==null){
+   // correct
+  }
+ }else{
+  // Clicked on nothing - gentle hint
+  playSpeech('試下拖磁鐵 🧲');
  }
 });
 
@@ -601,11 +768,24 @@ canvas.addEventListener('mousemove',function(e){
  drag.x=Math.max(20,Math.min(W-20,pos.x-dragOffX));
  drag.y=Math.max(20,Math.min(H-20,pos.y-dragOffY));
  fieldLineDirty=true;
+ // Proximity beep
+ if(currentLevel===0){
+  var nearestDist=999;
+  for(var i=0;i<ironObjects.length;i++){
+   if(ironObjects[i].collected)continue;
+   var d=Math.hypot(drag.x-ironObjects[i].x,drag.y-ironObjects[i].y);
+   if(d<nearestDist)nearestDist=d;
+  }
+  if(nearestDist<60&&gameTime-lastBeepTime>0.3){
+   var freq=300+50*(1-nearestDist/60);
+   playBeep(freq,0.08);
+   lastBeepTime=gameTime;
+  }
+ }
 });
 
 canvas.addEventListener('mouseup',function(e){
  drag=null;
- canvas.style.cursor='default';
 });
 
 canvas.addEventListener('touchstart',function(e){
@@ -618,6 +798,8 @@ canvas.addEventListener('touchstart',function(e){
   dragOffY=pos.y-obj.y;
   studentInteracted=true;
   fieldLineDirty=true;
+ }else{
+  playSpeech('試下拖磁鐵 🧲');
  }
 },{passive:false});
 
@@ -628,6 +810,20 @@ canvas.addEventListener('touchmove',function(e){
  drag.x=Math.max(20,Math.min(W-20,pos.x-dragOffX));
  drag.y=Math.max(20,Math.min(H-20,pos.y-dragOffY));
  fieldLineDirty=true;
+ // Proximity beep
+ if(currentLevel===0){
+  var nearestDist=999;
+  for(var i=0;i<ironObjects.length;i++){
+   if(ironObjects[i].collected)continue;
+   var d=Math.hypot(drag.x-ironObjects[i].x,drag.y-ironObjects[i].y);
+   if(d<nearestDist)nearestDist=d;
+  }
+  if(nearestDist<60&&gameTime-lastBeepTime>0.3){
+   var freq=300+50*(1-nearestDist/60);
+   playBeep(freq,0.08);
+   lastBeepTime=gameTime;
+  }
+ }
 },{passive:false});
 
 canvas.addEventListener('touchend',function(e){
@@ -637,19 +833,20 @@ canvas.addEventListener('touchend',function(e){
 canvas.addEventListener('touchcancel',function(e){
  drag=null;
 },{passive:false});
+
 function buildSidebar(){
- const sb=document.getElementById('sidebar');
+ var sb=document.getElementById('sidebar');
  sb.innerHTML='';
- levels.forEach((l,i)=>{
-  const btn=document.createElement('button');
+ for(var i=0;i<levels.length;i++){
+  var btn=document.createElement('button');
   btn.className='level-btn';
-  btn.setAttribute('aria-label','關卡'+l.id+'-'+l.name);
-  const ln=document.createElement('span');ln.className='level-num';ln.textContent=l.id;
-  const lt=document.createElement('span');lt.className='level-name';lt.textContent=l.name;
+  btn.setAttribute('aria-label','關卡'+levels[i].id+'-'+levels[i].name);
+  var ln=document.createElement('span');ln.className='level-num';ln.textContent=levels[i].id;
+  var lt=document.createElement('span');lt.className='level-name';lt.textContent=levels[i].name;
   btn.appendChild(ln);btn.appendChild(lt);
-  btn.addEventListener('click',()=>{currentLevel=i;initLevel(i)});
+  btn.addEventListener('click',function(idx){return function(){currentLevel=idx;initLevel(idx);};}(i));
   sb.appendChild(btn);
- });
+ }
 }
 
 document.getElementById('btnSound').addEventListener('click',function(){
@@ -661,14 +858,15 @@ document.getElementById('btnSound').addEventListener('click',function(){
 document.getElementById('btnField').addEventListener('click',function(){
  showFieldLines=!showFieldLines;
  this.classList.toggle('active',showFieldLines);
+ fieldLineDirty=true;
 });
-document.getElementById('btnReset').addEventListener('click',()=>initLevel(currentLevel));
+document.getElementById('btnReset').addEventListener('click',function(){initLevel(currentLevel);});
 document.getElementById('btnBannerNext').addEventListener('click',nextLevelBanner);
-document.getElementById('btnPrev').addEventListener('click',()=>{
- if(currentLevel>0){currentLevel--;initLevel(currentLevel)}
+document.getElementById('btnPrev').addEventListener('click',function(){
+ if(currentLevel>0){currentLevel--;initLevel(currentLevel);}
 });
-document.getElementById('btnNext').addEventListener('click',()=>{
- if(currentLevel<levels.length-1){currentLevel++;initLevel(currentLevel)}
+document.getElementById('btnNext').addEventListener('click',function(){
+ if(currentLevel<levels.length-1){currentLevel++;initLevel(currentLevel);}
 });
 document.getElementById('fontSlider').addEventListener('input',function(){
  document.documentElement.style.setProperty('--fs',this.value+'px');
