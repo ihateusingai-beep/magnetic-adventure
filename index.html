@@ -546,101 +546,97 @@ function draw(){
  checkLevelComplete();
 }
 
-let drag=null,dragOffX=0,dragOffY=0,hoverObj=null;
+let drag=null;
+let dragOffX=0,dragOffY=0;
 
 function pointerPos(e){
- const r=canvas.getBoundingClientRect();
- const t=e.touches?e.touches[0]:e;
- return{x:(t.clientX-r.left)*(canvas.width/r.width/dpr),y:(t.clientY-r.top)*(canvas.height/r.height/dpr)};
+ var r=canvas.getBoundingClientRect();
+ var t=e.touches?e.touches[0]:e;
+ var scaleX=W/r.width;
+ var scaleY=H/r.height;
+ return{x:(t.clientX-r.left)*scaleX,y:(t.clientY-r.top)*scaleY};
 }
 
-function hitTestMagnet(x,y){
- for(let i=0;i<magnets.length;i++){
-  const m=magnets[i];
-  if(Math.abs(x-m.x)<42&&Math.abs(y-m.y)<18)return magnets[i];
+function hitTest(x,y){
+ for(var i=0;i<magnets.length;i++){
+  var m=magnets[i];
+  if(Math.abs(x-m.x)<42&&Math.abs(y-m.y)<18)return m;
  }
- return null;
-}
-
-function hitTestIron(x,y){
- for(let i=0;i<ironObjects.length;i++){
-  const o=ironObjects[i];
+ for(var j=0;j<ironObjects.length;j++){
+  var o=ironObjects[j];
   if(o.collected)continue;
-  const halfW=o.type==='nail'?20:12;
-  const halfH=o.type==='nail'?10:8;
-  if(Math.abs(x-o.x)<halfW&&Math.abs(y-o.y)<halfH)return ironObjects[i];
+  if(Math.abs(x-o.x)<22&&Math.abs(y-o.y)<10)return o;
+ }
+ for(var k=0;k<compassNeedles.length;k++){
+  var n=compassNeedles[k];
+  var dx=x-n.x,dy=y-n.y;
+  if(Math.sqrt(dx*dx+dy*dy)<24)return n;
+ }
+ for(var p=0;p<plasticBeads.length;p++){
+  var b=plasticBeads[p];
+  var bx=x-b.x,by=y-b.y;
+  if(Math.sqrt(bx*bx+by*by)<15)return b;
  }
  return null;
 }
 
-function hitTestCompass(x,y){
- for(let i=0;i<compassNeedles.length;i++){
-  const n=compassNeedles[i];
-  if(dist(x,y,n.x,n.y)<24)return compassNeedles[i];
- }
- return null;
-}
-
-function hitTestBead(x,y){
- for(let i=0;i<plasticBeads.length;i++){
-  const b=plasticBeads[i];
-  if(dist(x,y,b.x,b.y)<15)return plasticBeads[i];
- }
- return null;
-}
-
-function hitTestAll(x,y){
- return hitTestMagnet(x,y)||hitTestIron(x,y)||hitTestCompass(x,y)||hitTestBead(x,y);
-}
-
-function setCursor(obj){
- if(drag)canvas.style.cursor='grabbing';
- else if(obj)canvas.style.cursor='grab';
- else canvas.style.cursor='default';
-}
-
-function startDrag(e){
+canvas.addEventListener('mousedown',function(e){
  e.preventDefault();
- const pt=pointerPos(e);
- const obj=hitTestAll(pt.x,pt.y);
- console.log('startDrag',{pt,obj,magnetCount:magnets.length,ironCount:ironObjects.length,compassCount:compassNeedles.length});
+ var pos=pointerPos(e);
+ var obj=hitTest(pos.x,pos.y);
  if(obj){
   drag=obj;
-  dragOffX=pt.x-obj.x;
-  dragOffY=pt.y-obj.y;
-  setCursor(null);
+  dragOffX=pos.x-obj.x;
+  dragOffY=pos.y-obj.y;
+  canvas.style.cursor='grabbing';
   studentInteracted=true;
   fieldLineDirty=true;
  }
-}
+});
 
-function moveDrag(e){
+canvas.addEventListener('mousemove',function(e){
  e.preventDefault();
- const pt=pointerPos(e);
- if(drag){
-  drag.x=Math.max(20,Math.min(W-20,pt.x-dragOffX));
-  drag.y=Math.max(20,Math.min(H-20,pt.y-dragOffY));
-  fieldLineDirty=true;
- }else{
-  const obj=hitTestAll(pt.x,pt.y);
-  setCursor(obj);
- }
-}
+ if(!drag)return;
+ var pos=pointerPos(e);
+ drag.x=Math.max(20,Math.min(W-20,pos.x-dragOffX));
+ drag.y=Math.max(20,Math.min(H-20,pos.y-dragOffY));
+ fieldLineDirty=true;
+});
 
-function endDrag(e){
+canvas.addEventListener('mouseup',function(e){
  drag=null;
- setCursor(null);
-}
+ canvas.style.cursor='default';
+});
 
-canvas.addEventListener('mousedown',startDrag);
-canvas.addEventListener('mousemove',moveDrag);
-canvas.addEventListener('mouseup',endDrag);
-canvas.addEventListener('mouseleave',endDrag);
+canvas.addEventListener('touchstart',function(e){
+ e.preventDefault();
+ var pos=pointerPos(e);
+ var obj=hitTest(pos.x,pos.y);
+ if(obj){
+  drag=obj;
+  dragOffX=pos.x-obj.x;
+  dragOffY=pos.y-obj.y;
+  studentInteracted=true;
+  fieldLineDirty=true;
+ }
+},{passive:false});
 
-canvas.addEventListener('touchstart',startDrag,{passive:false});
-canvas.addEventListener('touchmove',moveDrag,{passive:false});
-canvas.addEventListener('touchend',endDrag,{passive:false});
-canvas.addEventListener('touchcancel',endDrag,{passive:false});
+canvas.addEventListener('touchmove',function(e){
+ e.preventDefault();
+ if(!drag)return;
+ var pos=pointerPos(e);
+ drag.x=Math.max(20,Math.min(W-20,pos.x-dragOffX));
+ drag.y=Math.max(20,Math.min(H-20,pos.y-dragOffY));
+ fieldLineDirty=true;
+},{passive:false});
+
+canvas.addEventListener('touchend',function(e){
+ drag=null;
+},{passive:false});
+
+canvas.addEventListener('touchcancel',function(e){
+ drag=null;
+},{passive:false});
 function buildSidebar(){
  const sb=document.getElementById('sidebar');
  sb.innerHTML='';
