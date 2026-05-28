@@ -46,6 +46,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #complete-banner p{font-size:calc(18px + var(--fs,0px));margin-bottom:20px}
 #footer{position:absolute;bottom:4px;right:8px;font-size:11px;opacity:0.4;pointer-events:none}
 #progress-bar{position:absolute;top:16px;right:16px;background:var(--panel);backdrop-filter:blur(8px);border-radius:12px;padding:8px 14px;border:1px solid rgba(255,255,255,0.1);font-size:calc(13px + var(--fs,0px));color:var(--accent);min-width:100px;text-align:center}
+#obs-hint{position:absolute;top:50px;left:50%;transform:translateX(-50%);background:rgba(230,57,70,0.85);border-radius:8px;padding:6px 14px;font-size:calc(12px + var(--fs,0px));color:#fff;text-align:center;pointer-events:none;white-space:nowrap}
 #intro-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 #intro-overlay.show{display:flex}
 #intro-overlay h2{font-size:calc(32px + var(--fs,0px));color:var(--accent)}
@@ -75,6 +76,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
    <canvas id="canvas"></canvas>
    <div id="level-info"><h2>關卡 1</h2><p>拖動磁鐵，吸起鐵釘！</p></div>
    <div id="progress-bar">鐵釘 0/0</div>
+   <div id="obs-hint"></div>
    <div id="toolbar">
     <button class="btn" id="btnPrev" aria-label="上一關">◀ 上一關</button>
     <button class="btn" id="btnNext" aria-label="下一關">下一關 ▶</button>
@@ -102,6 +104,13 @@ const levels=[
 {id:3,name:'同極相斥',hint:'同極互相推開',desc:'N極同N極會互相推開，S極同S極都係。',task:'將兩塊磁鐵既同極擺近，觀察羅盤針既反應'},
 {id:4,name:'異極相吸',hint:'異極互相吸引',desc:'N極會被S極吸引，就好似好朋友咁。',task:'將N極同S極擺近，觀察羅盤針既反應'},
 {id:5,name:'指南針',hint:'指向北方',desc:'地球本身就係一塊大磁鐵，所以羅盤針永遠指向北方。',task:'羅盤針永遠指向北方（→），試下移動磁鐵干擾佢！'}
+];
+const obsHints=[
+'🔩 灰色 = 鐵，試下用磁鐵吸起佢！',
+'🧭 移動磁鐵，睇羅盤針點郁',
+'🧲🧲 兩邊都係 N 極，針點樣轉？',
+'🧲🧲 N 極 VS S 極，針點樣轉？',
+'🌍 干擾地球磁場，睇針點甩北方'
 ];
 let currentLevel=0,speechEnabled=true,showFieldLines=true;
 let magnets=[],compassNeedles=[],ironObjects=[],plasticBeads=[];
@@ -308,13 +317,26 @@ function drawBackground(){
  for(let x=0;x<=W;x+=30){
   ctx.beginPath();ctx.moveTo(x,H*0.72);ctx.lineTo(x,H);ctx.stroke();
  }
- // Draw N direction indicator at top-right
- ctx.save();
- ctx.fillStyle='rgba(255,255,255,0.4)';
- ctx.font='bold 16px sans-serif';
+ // Draw earth magnetic field arrows for level 4
+ if(currentLevel===4){
+  ctx.save();
+  ctx.fillStyle='rgba(69,123,157,0.4)';
+  ctx.font='20px sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  for(var ex=40;ex<W;ex+=60){
+   ctx.fillText('→',ex,35);
+   ctx.fillText('→',ex,55);
+  }
+  ctx.restore();
+ }
+ ctx.fillStyle='rgba(230,57,70,0.85)';
+ ctx.beginPath();ctx.roundRect(W/2-70,4,140,22,6);ctx.fill();
+ ctx.fillStyle='#fff';
+ ctx.font='bold 14px sans-serif';
  ctx.textAlign='center';
- ctx.fillText('北方 →',W-50,20);
- ctx.restore();
+ ctx.textBaseline='middle';
+ ctx.fillText('北方 →',W/2,15);
 }
 
 var NEEDLE_LEN=48;
@@ -363,6 +385,13 @@ function drawMagnet(x,y,dir,isDragging){
  ctx.beginPath();roundRect(0,-h/2,w/2,h,r,['tr','br']);ctx.fill();
  ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.fillText(dir?'N':'S',dir?-w/4:w/4,0);
+ // N/S pole label near magnet
+ ctx.font='12px sans-serif';
+ ctx.fillStyle='rgba(255,255,255,0.7)';
+ // left half = N if dir=true, S if dir=false
+ // right half = S if dir=true, N if dir=false
+ ctx.fillText(dir?'🅽':'🅴',-w/4,-22);  // left label
+ ctx.fillText(dir?'🅴':'🅽',w/4,22);    // right label
  ctx.restore();
 }
 
@@ -455,13 +484,19 @@ function getTargetAngle(n){
  return n.targetAngle;
 }
 
+function getNeedleLerpSpeed(){
+ if(currentLevel===1)return 0.20;
+ if(currentLevel===2||currentLevel===3)return 0.30;
+ return 0.12;
+}
 function updateNeedles(){
+ var speed=getNeedleLerpSpeed();
  for(const n of compassNeedles){
   const ta=getTargetAngle(n);
   let diff=ta-(n.angle||0);
   while(diff>Math.PI)diff-=Math.PI*2;
   while(diff<-Math.PI)diff+=Math.PI*2;
-  n.angle=(n.angle||0)+diff*0.12;
+  n.angle=(n.angle||0)+diff*speed;
  }
 }
 
@@ -559,7 +594,7 @@ function checkLevelComplete(){
     var diff=ta-(n.angle||0);while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
     if(Math.abs(diff-Math.PI)<Math.PI/4)count++;
    }
-   if(count>=Math.floor(compassNeedles.length*0.4))showComplete(currentLevel===2?'你發現咗！同極相斥！':'你發現咗！異極相吸！');
+   if(count>=Math.floor(compassNeedles.length*0.4))showComplete(currentLevel===2?'你發現咗！同極相斥！🧲≠🧲':'你發現咗！異極相吸！🧲＝🧲');
   }
  }else if(currentLevel===4){
   if(studentInteracted){
@@ -621,11 +656,12 @@ function showIntro(lv){
  var l=levels[lv];
  var icons={'磁鐵吸邊個？':'🧲→🔩','認識兩極':'🧲↔🧭','同極相斥':'🧲↔🧲','異極相吸':'🧲→🧲','指南針':'🌍→🧭'};
  title.textContent='關卡 '+l.id+'. '+l.name;
- desc.textContent=(icons[l.name]||'🧲')+'  '+l.task;
+ var hintIcon=obsHints[lv]||'';
+ desc.textContent=(icons[l.name]||'🧲')+'  '+l.task+'\n\n'+hintIcon;
  overlay.classList.add('show');
  setTimeout(function(){
   overlay.classList.remove('show');
- },2500);
+ },3000);
 }
 
 function initLevel(lv){
@@ -639,6 +675,7 @@ function initLevel(lv){
  var p2=document.createElement('p');p2.style.cssText='margin-top:6px;color:var(--accent)';p2.textContent='任務：'+levels[lv].task;
  info.appendChild(h2);info.appendChild(p1);info.appendChild(p2);
  document.querySelector('#hint-bar span').textContent=levels[lv].hint;
+ document.getElementById('obs-hint').textContent=obsHints[lv]||'';
  magnets=[];compassNeedles=[];ironObjects=[];plasticBeads=[];
  if(lv===0){
   magnets.push({x:W*0.7,y:H*0.5,dir:true});
